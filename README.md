@@ -883,4 +883,3 @@ GitHub: `https://github.com/M10111-A110/Q-BIT.140`
 | M4 | Backend / Integration |
 | M5 | AI Guidance |
 | M6 | Visualization |
-|
