@@ -1,6 +1,6 @@
 import pytest
 
-from backend.quantum.grover import build_grover_circuit
+from backend.quantum.algorithms.grover import build_grover_circuit
 from backend.quantum.execution import execute_circuit
 
 @pytest.mark.parametrize("target_state", ["00", "01", "10", "11"])

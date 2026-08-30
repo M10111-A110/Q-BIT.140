@@ -1,4 +1,4 @@
-from backend.quantum.grover import build_grover_circuit
+from backend.quantum.algorithms.grover import build_grover_circuit
 
 def test_grover_circuit_has_expected_qubits():
     circuit = build_grover_circuit(
