@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f0f14;
+    color: #f4f1ea;
+    max-width: 420px;
+    margin: 80px auto;
+    padding: 0 20px;
+  }
+  h1 { font-size: 24px; margin-bottom: 24px; }
+  input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    background: #1a1a22;
+    border: 1px solid #2a2a35;
+    color: #f4f1ea;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  button {
+    border: none;
+    padding: 11px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 8px;
+  }
+  #signup-btn { background: #2a2a35; color: #f4f1ea; }
+  #login-btn { background: #6ee7b7; color: #0f0f14; }
+  #logout-btn { background: #2a2a35; color: #f4f1ea; }
+  #status { color: #9a9a9a; margin-top: 14px; font-size: 14px; }
+  #user-email { font-weight: 600; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Log in</h1>
+
+<div id="auth-section">
+  <input id="email-input" type="email" placeholder="Email" />
+  <input id="password-input" type="password" placeholder="Password" />
+  <button id="signup-btn">Sign Up</button>
+  <button id="login-btn">Log In</button>
+</div>
+
+<div id="logged-in-section" style="display:none;">
+  <p id="user-email"></p>
+  <button id="logout-btn">Log Out</button>
+</div>
+
+<p id="status"></p>
+
+<script>
+  const supabaseClient = window.supabase.createClient(
+    "https://vmtestykmprdknoiilse.supabase.co",
+    "sb_publishable_rxspuE96r68kIW0lWWITPg_PcONREqK"
+  );
+
+  const authSection = document.getElementById("auth-section");
+  const loggedInSection = document.getElementById("logged-in-section");
+  const emailInput = document.getElementById("email-input");
+  const passwordInput = document.getElementById("password-input");
+  const userEmailEl = document.getElementById("user-email");
+  const statusEl = document.getElementById("status");
+
+  function showLoggedIn(user) {
+    authSection.style.display = "none";
+    loggedInSection.style.display = "block";
+    userEmailEl.textContent = `Logged in as: ${user.email}`;
+  }
+
+  function showLoggedOut() {
+    authSection.style.display = "block";
+    loggedInSection.style.display = "none";
+  }
+
+  // On page load, ask Supabase "is there already a logged-in session?"
+  // — this is what makes login "stick" across page refreshes.
+  async function checkExistingSession() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (user) showLoggedIn(user);
+  }
+
+  document.getElementById("signup-btn").addEventListener("click", async () => {
+    const { error } = await supabaseClient.auth.signUp({
+      email: emailInput.value,
+      password: passwordInput.value
+    });
+    statusEl.textContent = error
+      ? error.message
+      : "Account created — check your email to confirm, or just log in below.";
+  });
+
+  document.getElementById("login-btn").addEventListener("click", async () => {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: emailInput.value,
+      password: passwordInput.value
+    });
+    if (error) {
+      statusEl.textContent = error.message;
+    } else {
+      showLoggedIn(data.user);
+    }
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
+    showLoggedOut();
+  });
+
+  checkExistingSession();
+</script>
+
+</body>
+</html>
