@@ -16,7 +16,7 @@ def run_experiment(experiment: QuantumExperiment) -> SimulationResult:
         iterations=experiment.iterations,
     )
 
-    counts = execute_circuit(circuit, shots=experiment.shots)
+    counts = dict(execute_circuit(circuit, shots=experiment.shots))
     circuit_metadata = extract_circuit_metadata(circuit)
 
     return SimulationResult(
