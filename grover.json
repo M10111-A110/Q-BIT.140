@@ -1,0 +1,19 @@
+{
+    "algorithm": "Grover's Algorithm",
+    "num_qubits": 2,
+    "target_state": "10",
+    "shots": 1000,
+    "counts": {
+        "00": 24,
+        "01": 22,
+        "10": 930,
+        "11": 24
+    },
+    "probabilities": {
+        "00": 0.024,
+        "01": 0.022,
+        "10": 0.93,
+        "11": 0.024
+    },
+    "prediction": "10"
+}

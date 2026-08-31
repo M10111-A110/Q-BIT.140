@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Q-BIT | Quantum Circuit Builder</title>
+
+    <style>
+
+        :root {
+            --bg: #f5f7fb;
+            --panel: #ffffff;
+            --text: #111827;
+            --muted: #64748b;
+            --border: #d1d5db;
+            --accent: #2563eb;
+            --grid: #e5e7eb;
+            --wire: #64748b;
+            --gate: #dbeafe;
+            --gate-text: #1e3a8a;
+            --danger: #dc2626;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --border: #334155;
+            --accent: #60a5fa;
+            --grid: #334155;
+            --wire: #64748b;
+            --gate: #1e40af;
+            --gate-text: #ffffff;
+            --danger: #f87171;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: 0.3s;
+        }
+
+        /* HEADER */
+
+        header {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border);
+            background: var(--panel);
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 24px;
+        }
+
+        header p {
+            color: var(--muted);
+            margin-top: 5px;
+        }
+
+        .theme-button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+
+        /* MAIN */
+
+        .main {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            min-height: calc(100vh - 90px);
+        }
+
+        /* SIDEBAR */
+
+        .sidebar {
+            padding: 20px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+        }
+
+        .sidebar h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .gate-palette {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .palette-gate {
+            background: var(--gate);
+            color: var(--gate-text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 5px;
+            text-align: center;
+            font-weight: bold;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .palette-gate:active {
+            cursor: grabbing;
+        }
+
+        .sidebar-section {
+            margin-top: 25px;
+        }
+
+        .sidebar button {
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 9px;
+            border-radius: 7px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .sidebar button:hover {
+            border-color: var(--accent);
+        }
+
+        .danger {
+            color: var(--danger) !important;
+        }
+
+        /* WORKSPACE */
+
+        .workspace {
+            padding: 25px;
+            overflow-x: auto;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar button {
+            padding: 10px 15px;
+            border-radius: 7px;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .toolbar button:hover {
+            border-color: var(--accent);
+        }
+
+        /* CIRCUIT */
+
+        .circuit-wrapper {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .circuit {
+            position: relative;
+            min-width: 800px;
+        }
+
+        .column-labels {
+            display: flex;
+            margin-left: 70px;
+            margin-bottom: 10px;
+        }
+
+        .column-label {
+            width: 90px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .qubit-row {
+            display: flex;
+            align-items: center;
+            height: 70px;
+        }
+
+        .qubit-label {
+            width: 70px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .cell {
+            width: 90px;
+            height: 70px;
+            border-left: 1px dashed var(--grid);
+            position: relative;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cell:last-child {
+            border-right: 1px dashed var(--grid);
+        }
+
+        /* QUBIT WIRE */
+
+        .cell::before {
+            content: "";
+            position: absolute;
+            height: 2px;
+            background: var(--wire);
+            left: 0;
+            right: 0;
+            top: 50%;
+            z-index: 0;
+        }
+
+        /* DROP AREA */
+
+        .cell.drag-over {
+            background: rgba(37, 99, 235, 0.12);
+        }
+
+        /* GATE */
+
+        .circuit-gate {
+            width: 42px;
+            height: 42px;
+
+            background: var(--gate);
+            color: var(--gate-text);
+
+            border: 2px solid var(--accent);
+            border-radius: 7px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-weight: bold;
+
+            cursor: grab;
+
+            position: relative;
+            z-index: 5;
+
+            user-select: none;
+        }
+
+        .circuit-gate:hover {
+            transform: scale(1.05);
+        }
+
+        .circuit-gate.selected {
+            outline: 3px solid var(--accent);
+        }
+
+        /* MULTI QUBIT */
+
+        .control-dot {
+            width: 14px;
+            height: 14px;
+            background: var(--text);
+            border-radius: 50%;
+            position: relative;
+            z-index: 10;
+        }
+
+        .target-x {
+            font-size: 26px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* INFO */
+
+        .info {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .panel h2 {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        /* JSON */
+
+        #jsonOutput {
+            width: 100%;
+            height: 250px;
+
+            background: var(--bg);
+            color: var(--text);
+
+            border: 1px solid var(--border);
+            border-radius: 8px;
+
+            padding: 12px;
+
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        /* SELECTED GATE */
+
+        .property-row {
+            margin-bottom: 12px;
+        }
+
+        .property-row label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .property-row input,
+        .property-row select {
+            width: 100%;
+            padding: 9px;
+
+            border-radius: 7px;
+            border: 1px solid var(--border);
+
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .delete-gate {
+            background: var(--danger);
+            color: white;
+
+            border: none;
+            padding: 9px 14px;
+
+            border-radius: 7px;
+
+            cursor: pointer;
+        }
+
+        @media (max-width: 800px) {
+
+            .main {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .gate-palette {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .info {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+</head>
+
+
+<body>
+
+<header>
+
+    <div>
+        <h1>Q-BIT Quantum Circuit Builder</h1>
+
+        <p>
+            Drag and drop gates to create your own quantum circuit
+        </p>
+    </div>
+
+    <button
+        class="theme-button"
+        onclick="toggleTheme()"
+        id="themeButton">
+
+        🌙 Dark Mode
+
+    </button>
+
+</header>
+
+
+<div class="main">
+
+
+    <!-- =========================
+         GATE PALETTE
+    ========================== -->
+
+    <aside class="sidebar">
+
+        <h2>Gate Palette</h2>
+
+        <div class="gate-palette">
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="H">
+                H
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="X">
+                X
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="Y">
+                Y
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="Z">
+                Z
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="S">
+                S
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="T">
+                T
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="RX">
+                RX
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="RY">
+                RY
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="RZ">
+                RZ
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="CNOT">
+                CX
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="CZ">
+                CZ
+            </div>
+
+            <div
+                class="palette-gate"
+                draggable="true"
+                data-gate="SWAP">
+                SWAP
+            </div>
+
+        </div>
+
+
+        <div class="sidebar-section">
+
+            <h2>Circuit</h2>
+
+            <button onclick="addQubit()">
+                + Add Qubit
+            </button>
+
+            <button onclick="removeQubit()">
+                − Remove Qubit
+            </button>
+
+            <button onclick="addColumn()">
+                + Add Column
+            </button>
+
+            <button onclick="removeColumn()">
+                − Remove Column
+            </button>
+
+            <button
+                class="danger"
+                onclick="clearCircuit()">
+
+                Clear Circuit
+
+            </button>
+
+        </div>
+
+
+        <div class="sidebar-section">
+
+            <h2>Data</h2>
+
+            <button onclick="downloadJSON()">
+                Save JSON
+            </button>
+
+            <button onclick="loadFromJSON()">
+                Load JSON
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =========================
+         WORKSPACE
+    ========================== -->
+
+    <main class="workspace">
+
+        <div class="toolbar">
+
+            <button onclick="refreshJSON()">
+                Update JSON
+            </button>
+
+            <button onclick="resetCircuit()">
+                Reset Circuit
+            </button>
+
+        </div>
+
+
+        <div class="circuit-wrapper">
+
+            <div class="circuit" id="circuit">
+
+                <!-- Created by JavaScript -->
+
+            </div>
+
+        </div>
+
+
+        <div class="info">
+
+
+            <!-- SELECTED GATE -->
+
+            <div class="panel">
+
+                <h2>Selected Gate</h2>
+
+                <div id="gateProperties">
+
+                    <p style="color: var(--muted);">
+                        Select a gate to see its properties.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- JSON -->
+
+            <div class="panel">
+
+                <h2>Circuit JSON</h2>
+
+                <textarea
+                    id="jsonOutput"
+                    spellcheck="false">
+                </textarea>
+
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<script>
+
+    /* =========================================
+       CIRCUIT DATA
+    ========================================= */
+
+    let circuit = {
+
+        num_qubits: 3,
+
+        num_columns: 8,
+
+        gates: []
+
+    };
+
+
+    let selectedGateId = null;
+
+    let draggedGateType = null;
+
+
+    /* =========================================
+       RENDER CIRCUIT
+    ========================================= */
+
+    function renderCircuit() {
+
+        const circuitElement =
+            document.getElementById("circuit");
+
+        circuitElement.innerHTML = "";
+
+
+        /* COLUMN NUMBERS */
+
+        const columnLabels =
+            document.createElement("div");
+
+        columnLabels.className =
+            "column-labels";
+
+
+        for (
+            let column = 0;
+            column < circuit.num_columns;
+            column++
+        ) {
+
+            const label =
+                document.createElement("div");
+
+            label.className =
+                "column-label";
+
+            label.textContent =
+                column + 1;
+
+            columnLabels.appendChild(label);
+        }
+
+        circuitElement.appendChild(columnLabels);
+
+
+        /* QUBITS */
+
+        for (
+            let qubit = 0;
+            qubit < circuit.num_qubits;
+            qubit++
+        ) {
+
+            const row =
+                document.createElement("div");
+
+            row.className =
+                "qubit-row";
+
+
+            const label =
+                document.createElement("div");
+
+            label.className =
+                "qubit-label";
+
+            label.textContent =
+                "q" + qubit;
+
+            row.appendChild(label);
+
+
+            /* COLUMNS */
+
+            for (
+                let column = 0;
+                column < circuit.num_columns;
+                column++
+            ) {
+
+                const cell =
+                    document.createElement("div");
+
+                cell.className = "cell";
+
+                cell.dataset.qubit =
+                    qubit;
+
+                cell.dataset.column =
+                    column;
+
+
+                /* DRAG OVER */
+
+                cell.addEventListener(
+                    "dragover",
+                    function(event) {
+
+                        event.preventDefault();
+
+                        cell.classList.add(
+                            "drag-over"
+                        );
+
+                    }
+                );
+
+
+                cell.addEventListener(
+                    "dragleave",
+                    function() {
+
+                        cell.classList.remove(
+                            "drag-over"
+                        );
+
+                    }
+                );
+
+
+                /* DROP */
+
+                cell.addEventListener(
+                    "drop",
+                    function(event) {
+
+                        event.preventDefault();
+
+                        cell.classList.remove(
+                            "drag-over"
+                        );
+
+
+                        const gateId =
+                            event.dataTransfer
+                            .getData("gateId");
+
+
+                        if (gateId) {
+
+                            moveGate(
+                                Number(gateId),
+                                qubit,
+                                column
+                            );
+
+                        } else if (
+                            draggedGateType
+                        ) {
+
+                            addGate(
+                                draggedGateType,
+                                qubit,
+                                column
+                            );
+
+                        }
+
+                        draggedGateType = null;
+
+                    }
+                );
+
+
+                /* FIND GATE */
+
+                const gate =
+                    circuit.gates.find(
+                        g =>
+                            g.qubit === qubit &&
+                            g.column === column
+                    );
+
+
+                if (gate) {
+
+                    const gateElement =
+                        createGateElement(gate);
+
+                    cell.appendChild(
+                        gateElement
+                    );
+
+                }
+
+
+                row.appendChild(cell);
+
+            }
+
+
+            circuitElement.appendChild(row);
+
+        }
+
+    }
+
+
+    /* =========================================
+       CREATE GATE ELEMENT
+    ========================================= */
+
+    function createGateElement(gate) {
+
+        const element =
+            document.createElement("div");
+
+        element.className =
+            "circuit-gate";
+
+        element.draggable = true;
+
+        element.dataset.id =
+            gate.id;
+
+
+        /* DISPLAY */
+
+        if (gate.type === "CNOT") {
+
+            element.innerHTML =
+                '<span class="target-x">⊕</span>';
+
+        } else if (gate.type === "SWAP") {
+
+            element.innerHTML =
+                "×";
+
+        } else {
+
+            element.textContent =
+                gate.type;
+
+        }
+
+
+        /* SELECT */
+
+        element.addEventListener(
+            "click",
+            function(event) {
+
+                event.stopPropagation();
+
+                selectGate(gate.id);
+
+            }
+        );
+
+
+        /* DRAG EXISTING GATE */
+
+        element.addEventListener(
+            "dragstart",
+            function(event) {
+
+                event.stopPropagation();
+
+                event.dataTransfer.setData(
+                    "gateId",
+                    gate.id
+                );
+
+            }
+        );
+
+
+        return element;
+
+    }
+
+
+    /* =========================================
+       PALETTE DRAG
+    ========================================= */
+
+    document
+        .querySelectorAll(".palette-gate")
+        .forEach(function(gate) {
+
+            gate.addEventListener(
+                "dragstart",
+                function(event) {
+
+                    draggedGateType =
+                        gate.dataset.gate;
+
+                    event.dataTransfer.setData(
+                        "newGate",
+                        draggedGateType
+                    );
+
+                }
+            );
+
+        });
+
+
+    /* =========================================
+       ADD GATE
+    ========================================= */
+
+    function addGate(
+        type,
+        qubit,
+        column
+    ) {
+
+        /* DON'T OVERWRITE EXISTING GATE */
+
+        const existing =
+            circuit.gates.find(
+                g =>
+                    g.qubit === qubit &&
+                    g.column === column
+            );
+
+
+        if (existing) {
+
+            alert(
+                "There is already a gate here."
+            );
+
+            return;
+
+        }
+
+
+        const newGate = {
+
+            id: Date.now(),
+
+            type: type,
+
+            qubit: qubit,
+
+            column: column
+
+        };
+
+
+        /* PARAMETERS FOR ROTATION GATES */
+
+        if (
+            type === "RX" ||
+            type === "RY" ||
+            type === "RZ"
+        ) {
+
+            newGate.angle = 90;
+
+        }
+
+
+        circuit.gates.push(
+            newGate
+        );
+
+
+        selectedGateId =
+            newGate.id;
+
+
+        renderCircuit();
+
+        showProperties();
+
+        refreshJSON();
+
+    }
+
+
+    /* =========================================
+       MOVE GATE
+    ========================================= */
+
+    function moveGate(
+        gateId,
+        newQubit,
+        newColumn
+    ) {
+
+        const gate =
+            circuit.gates.find(
+                g => g.id === gateId
+            );
+
+
+        if (!gate) return;
+
+
+        const occupied =
+            circuit.gates.find(
+                g =>
+                    g.id !== gateId &&
+                    g.qubit === newQubit &&
+                    g.column === newColumn
+            );
+
+
+        if (occupied) {
+
+            alert(
+                "That position already contains a gate."
+            );
+
+            return;
+
+        }
+
+
+        gate.qubit =
+            newQubit;
+
+        gate.column =
+            newColumn;
+
+
+        renderCircuit();
+
+        refreshJSON();
+
+    }
+
+
+    /* =========================================
+       SELECT GATE
+    ========================================= */
+
+    function selectGate(id) {
+
+        selectedGateId = id;
+
+        renderCircuit();
+
+        showProperties();
+
+    }
+
+
+    /* =========================================
+       GATE PROPERTIES
+    ========================================= */
+
+    function showProperties() {
+
+        const panel =
+            document.getElementById(
+                "gateProperties"
+            );
+
+
+        const gate =
+            circuit.gates.find(
+                g => g.id === selectedGateId
+            );
+
+
+        if (!gate) {
+
+            panel.innerHTML =
+                `<p style="color:var(--muted)">
+                    Select a gate to see its properties.
+                </p>`;
+
+            return;
+
+        }
+
+
+        let html = `
+
+            <div class="property-row">
+
+                <label>Gate</label>
+
+                <input
+                    value="${gate.type}"
+                    disabled>
+
+            </div>
+
+
+            <div class="property-row">
+
+                <label>Qubit</label>
+
+                <input
+                    type="number"
+                    min="0"
+                    max="${circuit.num_qubits - 1}"
+                    value="${gate.qubit}"
+                    onchange="changeQubit(this.value)">
+
+            </div>
+
+
+            <div class="property-row">
+
+                <label>Column</label>
+
+                <input
+                    type="number"
+                    min="0"
+                    max="${circuit.num_columns - 1}"
+                    value="${gate.column}"
+                    onchange="changeColumn(this.value)">
+
+            </div>
+        `;
+
+
+        if (
+            gate.type === "RX" ||
+            gate.type === "RY" ||
+            gate.type === "RZ"
+        ) {
+
+            html += `
+
+                <div class="property-row">
+
+                    <label>
+                        Angle (degrees)
+                    </label>
+
+                    <input
+                        type="number"
+                        value="${gate.angle || 90}"
+                        onchange="changeAngle(this.value)">
+
+                </div>
+
+            `;
+
+        }
+
+
+        html += `
+
+            <button
+                class="delete-gate"
+                onclick="deleteSelectedGate()">
+
+                Delete Gate
+
+            </button>
+
+        `;
+
+
+        panel.innerHTML =
+            html;
+
+    }
+
+
+    /* =========================================
+       PROPERTY CHANGES
+    ========================================= */
+
+    function changeQubit(value) {
+
+        const gate =
+            getSelectedGate();
+
+        if (!gate) return;
+
+
+        const q =
+            Number(value);
+
+
+        if (
+            q < 0 ||
+            q >= circuit.num_qubits
+        ) return;
+
+
+        gate.qubit =
+            q;
+
+
+        renderCircuit();
+
+        showProperties();
+
+        refreshJSON();
+
+    }
+
+
+    function changeColumn(value) {
+
+        const gate =
+            getSelectedGate();
+
+        if (!gate) return;
+
+
+        const c =
+            Number(value);
+
+
+        if (
+            c < 0 ||
+            c >= circuit.num_columns
+        ) return;
+
+
+        gate.column =
+            c;
+
+
+        renderCircuit();
+
+        showProperties();
+
+        refreshJSON();
+
+    }
+
+
+    function changeAngle(value) {
+
+        const gate =
+            getSelectedGate();
+
+        if (!gate) return;
+
+
+        gate.angle =
+            Number(value);
+
+
+        refreshJSON();
+
+    }
+
+
+    function getSelectedGate() {
+
+        return circuit.gates.find(
+            g => g.id === selectedGateId
+        );
+
+    }
+
+
+    /* =========================================
+       DELETE GATE
+    ========================================= */
+
+    function deleteSelectedGate() {
+
+        if (selectedGateId === null)
+            return;
+
+
+        circuit.gates =
+            circuit.gates.filter(
+                g =>
+                    g.id !== selectedGateId
+            );
+
+
+        selectedGateId = null;
+
+
+        renderCircuit();
+
+        showProperties();
+
+        refreshJSON();
+
+    }
+
+
+    /* =========================================
+       ADD / REMOVE QUBITS
+    ========================================= */
+
+    function addQubit() {
+
+        circuit.num_qubits++;
+
+        renderCircuit();
+
+        refreshJSON();
+
+    }
+
+
+    function removeQubit() {
+
+        if (circuit.num_qubits <= 1)
+            return;
+
+
+        const removedQubit =
+            circuit.num_qubits - 1;
+
+
+        circuit.gates =
+            circuit.gates.filter(
+                g =>
+                    g.qubit !== removedQubit
+            );
+
+
+        circuit.num_qubits--;
+
+
+        renderCircuit();
+
+        refreshJSON();
+
+    }
+
+
+    /* =========================================
+       ADD / REMOVE COLUMNS
+    ========================================= */
+
+    function addColumn() {
+
+        circuit.num_columns++;
+
+        renderCircuit();
+
+        refreshJSON();
+
+    }
+
+
+    function removeColumn() {
+
+        if (circuit.num_columns <= 1)
+            return;
+
+
+        const removedColumn =
+            circuit.num_columns - 1;
+
+
+        circuit.gates =
+            circuit.gates.filter(
+                g =>
+                    g.column !== removedColumn
+            );
+
+
+        circuit.num_columns--;
+
+
+        renderCircuit();
+
+        refreshJSON();
+
+    }
+
+
+    /* =========================================
+       CLEAR CIRCUIT
+    ========================================= */
+
+    function clearCircuit() {
+
+        if (
+            !confirm(
+                "Clear the entire circuit?"
+            )
+        ) return;
+
+
+        circuit.gates = [];
+
+        selectedGateId = null;
+
+
+        renderCircuit();
+
+        showProperties();
+
+        refreshJSON();
+
+    }
+
+
+    /* =========================================
+       RESET
+    ========================================= */
+
+    function resetCircuit() {
+
+        circuit = {
+
+            num_qubits: 3,
+
+            num_columns: 8,
+
+            gates: []
+
+        };
+
+
+        selectedGateId = null;
+
+
+        renderCircuit();
+
+        showProperties();
+
+        refreshJSON();
+
+    }
+
+
+    /* =========================================
+       JSON
+    ========================================= */
+
+    function refreshJSON() {
+
+        document.getElementById(
+            "jsonOutput"
+        ).value =
+            JSON.stringify(
+                circuit,
+                null,
+                4
+            );
+
+    }
+
+
+    /* =========================================
+       DOWNLOAD JSON
+    ========================================= */
+
+    function downloadJSON() {
+
+        const data =
+            JSON.stringify(
+                circuit,
+                null,
+                4
+            );
+
+
+        const blob =
+            new Blob(
+                [data],
+                {
+                    type:
+                        "application/json"
+                }
+            );
+
+
+        const url =
+            URL.createObjectURL(
+                blob
+            );
+
+
+        const link =
+            document.createElement(
+                "a"
+            );
+
+
+        link.href = url;
+
+        link.download =
+            "quantum_circuit.json";
+
+
+        link.click();
+
+
+        URL.revokeObjectURL(url);
+
+    }
+
+
+    /* =========================================
+       LOAD JSON FROM TEXTAREA
+    ========================================= */
+
+    function loadFromJSON() {
+
+        try {
+
+            const text =
+                document.getElementById(
+                    "jsonOutput"
+                ).value;
+
+
+            const loaded =
+                JSON.parse(text);
+
+
+            if (
+                !loaded.num_qubits ||
+                !loaded.num_columns ||
+                !Array.isArray(loaded.gates)
+            ) {
+
+                throw new Error(
+                    "Invalid circuit format"
+                );
+
+            }
+
+
+            circuit =
+                loaded;
+
+
+            selectedGateId = null;
+
+
+            renderCircuit();
+
+            showProperties();
+
+            refreshJSON();
+
+
+        } catch (error) {
+
+            alert(
+                "Invalid JSON:\n" +
+                error.message
+            );
+
+        }
+
+    }
+
+
+    /* =========================================
+       DARK / LIGHT MODE
+    ========================================= */
+
+    function toggleTheme() {
+
+        const html =
+            document.documentElement;
+
+        const current =
+            html.getAttribute(
+                "data-theme"
+            );
+
+
+        if (current === "dark") {
+
+            html.setAttribute(
+                "data-theme",
+                "light"
+            );
+
+            document.getElementById(
+                "themeButton"
+            ).textContent =
+                "🌙 Dark Mode";
+
+
+            localStorage.setItem(
+                "theme",
+                "light"
+            );
+
+        } else {
+
+            html.setAttribute(
+                "data-theme",
+                "dark"
+            );
+
+            document.getElementById(
+                "themeButton"
+            ).textContent =
+                "☀️ Light Mode";
+
+
+            localStorage.setItem(
+                "theme",
+                "dark"
+            );
+
+        }
+
+    }
+
+
+    /* =========================================
+       STARTUP
+    ========================================= */
+
+    window.addEventListener(
+        "DOMContentLoaded",
+        function() {
+
+            const savedTheme =
+                localStorage.getItem(
+                    "theme"
+                ) || "light";
+
+
+            document.documentElement
+                .setAttribute(
+                    "data-theme",
+                    savedTheme
+                );
+
+
+            document.getElementById(
+                "themeButton"
+            ).textContent =
+                savedTheme === "dark"
+                    ? "☀️ Light Mode"
+                    : "🌙 Dark Mode";
+
+
+            renderCircuit();
+
+            refreshJSON();
+
+        }
+    );
+
+</script>
+
+</body>
+</html>
