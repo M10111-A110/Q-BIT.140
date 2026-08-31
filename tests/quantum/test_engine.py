@@ -78,21 +78,30 @@ def test_run_experiment_orchestration_isolated():
         iterations=1,
         shots=256,
     )
+
     fake_circuit = MagicMock()
     fake_counts = {"10": 256}
+    fake_builder = MagicMock(return_value=fake_circuit)
 
     with patch("backend.quantum.engine.validate_experiment") as mock_validate, \
-         patch("backend.quantum.engine.build_grover_circuit", return_value=fake_circuit) as mock_build, \
+         patch("backend.quantum.engine.get_algorithm", return_value=fake_builder) as mock_get_algorithm, \
          patch("backend.quantum.engine.execute_circuit", return_value=fake_counts) as mock_exec:
 
         result = run_experiment(experiment)
 
-        mock_validate.assert_called_once_with(experiment)
-        mock_build.assert_called_once_with(num_qubits=2, target_state="10", iterations=1)
-        mock_exec.assert_called_once_with(fake_circuit, shots=256)
+    mock_validate.assert_called_once_with(experiment)
+    mock_get_algorithm.assert_called_once_with("grover")
+    fake_builder.assert_called_once_with(
+        num_qubits=2,
+        target_state="10",
+        iterations=1,
+    )
+    mock_exec.assert_called_once_with(
+        fake_circuit,
+        shots=256,
+    )
 
-        assert isinstance(result, SimulationResult)
-        assert result.algorithm == "grover"
-        assert result.target_state == "10"
-        assert result.shots == 256
-        assert result.counts == fake_counts
+    assert result.algorithm == "grover"
+    assert result.target_state == "10"
+    assert result.shots == 256
+    assert result.counts == fake_counts
