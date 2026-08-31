@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import time
 from typing import Any, Optional
 
-from .concepts import CONCEPT_GRAPH, resolve_concept_id
+from .activities import MVP_ACTIVITIES, get_activity
+from .concepts import (
+    CONCEPT_GRAPH,
+    get_concept_display_name,
+    resolve_concept_id,
+)
+from .evidence import GapInference, LearnerEvidence
 from .models import (
     AdaptiveRecommendation,
     LearnerContext,
@@ -114,6 +121,132 @@ class LearnerModel:
             concept_id=resolve_concept_id(topic),
         )
 
+    def record_evidence(
+        self,
+        evidence: LearnerEvidence,
+        state: LearnerState,
+    ) -> AdaptiveRecommendation:
+        """
+        Ingest an empirical LearnerEvidence observation, accumulate historical evidence,
+        derive calibrated gap inferences, and return a deterministic adaptive recommendation.
+        """
+        canonical_concept = resolve_concept_id(evidence.concept_id)
+        display_name = get_concept_display_name(canonical_concept)
+
+        # 1. Append to evidence history
+        state.evidence_history.append(evidence.to_dict())
+
+        # 2. Update basic state counters
+        state.attempts[display_name] = state.attempts.get(display_name, 0) + 1
+        state.last_updated[display_name] = time.time()
+
+        # 3. Update score trajectory based on outcome
+        attempt_score = 1.0 if evidence.is_correct else 0.0
+        state.concept_scores[display_name] = attempt_score
+        state.score_history.setdefault(display_name, []).append(attempt_score)
+
+        if not evidence.is_correct:
+            err_repr = str(evidence.learner_response)
+            state.errors.setdefault(display_name, []).append(err_repr)
+        else:
+            # If successful after prior errors, clear active error list for this concept
+            if display_name in state.errors and len(state.errors[display_name]) > 0:
+                state.errors[display_name] = []
+
+        # 4. Deterministic Gap Inference from Accumulated Evidence
+        concept_evidence = [
+            e for e in state.evidence_history
+            if resolve_concept_id(e.get("concept_id", "")) == canonical_concept
+        ]
+        recent = concept_evidence[-5:]
+        recent_errors = [e for e in recent if not e.get("is_correct", False)]
+        recent_successes = [e for e in recent if e.get("is_correct", False)]
+
+        if len(recent_errors) == 0 and len(recent_successes) >= 1:
+            confidence = 0.0
+            status = "mastered"
+            desc = f"Evidence demonstrates consistent understanding of {display_name}."
+        elif evidence.is_correct and len(concept_evidence) >= 2 and not concept_evidence[-2].get("is_correct", False):
+            confidence = 0.15
+            status = "improving"
+            desc = f"Evidence indicates post-intervention improvement in {display_name}."
+        elif len(recent_errors) == 1:
+            confidence = 0.35  # Low confidence: single error is not proof of misconception
+            status = "observing"
+            desc = f"Evidence is consistent with possible difficulty in {display_name} (preliminary observation from 1 incorrect attempt)."
+        else:
+            # 2 or more recent errors
+            confidence = min(0.40 + len(recent_errors) * 0.25, 0.90)
+            status = "remediation_needed"
+            desc = f"Evidence is consistent with possible difficulty in {display_name} supported by {len(recent_errors)} repeated incorrect attempts."
+
+        inference = GapInference(
+            concept_id=canonical_concept,
+            confidence=round(confidence, 2),
+            status=status,
+            supporting_evidence_count=len(recent_errors),
+            description=desc,
+        )
+        state.gap_inferences[canonical_concept] = inference.to_dict()
+
+        # 5. Adaptive Routing Selection
+        if evidence.activity_id in MVP_ACTIVITIES:
+            activity = get_activity(evidence.activity_id)
+
+            if evidence.is_correct:
+                if activity.next_activity_id:
+                    next_act = get_activity(activity.next_activity_id)
+                    return AdaptiveRecommendation(
+                        action="advance",
+                        target=activity.next_activity_id,
+                        reason=f"Learner demonstrated correct understanding in '{activity.title}'. Ready to advance to '{next_act.title}'.",
+                        concept_id=canonical_concept,
+                    )
+                return AdaptiveRecommendation(
+                    action="advance",
+                    target=None,
+                    reason=f"Learner demonstrated correct understanding in '{activity.title}' (end of activity sequence).",
+                    concept_id=canonical_concept,
+                )
+
+            # Not correct:
+            if len(recent_errors) == 1:
+                # Case B: Single error -> gather more evidence
+                return AdaptiveRecommendation(
+                    action="gather_evidence",
+                    target=activity.activity_id,
+                    reason=f"Initial prediction mismatch on '{activity.title}'. Gathering additional evidence before selecting remediation.",
+                    concept_id=canonical_concept,
+                )
+
+            # Case C: Repeated errors (>= 2) -> targeted remediation
+            if activity.remediation_activity_id:
+                remed_act = get_activity(activity.remediation_activity_id)
+                return AdaptiveRecommendation(
+                    action="targeted_remediation",
+                    target=activity.remediation_activity_id,
+                    reason=f"Repeated prediction errors provide evidence consistent with possible difficulty in {display_name}. Recommending targeted remediation in '{remed_act.title}'.",
+                    concept_id=canonical_concept,
+                )
+
+            return AdaptiveRecommendation(
+                action="targeted_remediation",
+                target=activity.activity_id,
+                reason=f"Repeated errors provide evidence consistent with possible difficulty in {display_name}. Reviewing current concept.",
+                concept_id=canonical_concept,
+            )
+
+        # Fallback to general topic routing if activity is not registered
+        if display_name in self.graph:
+            return self.recommend_next(display_name, state)
+
+        return AdaptiveRecommendation(
+            action="reinforce_current_concept",
+            target=display_name,
+            reason=f"Recorded evidence for {display_name}.",
+            concept_id=canonical_concept,
+        )
+
     def get_mastery_profile(self, state: LearnerState) -> dict[str, float]:
         """Compute mastery for all concepts in the DAG."""
         return {
@@ -128,7 +261,7 @@ class LearnerModel:
     ) -> LearnerContext:
         """
         Build a complete LearnerContext domain snapshot summarizing mastery,
-        attempts, errors, and current recommendation.
+        attempts, errors, gap inferences, and current recommendation.
         """
         mastery_by_canonical = {
             resolve_concept_id(topic): self.compute_mastery(topic, state)
@@ -146,6 +279,7 @@ class LearnerModel:
             attempts=dict(state.attempts),
             errors=dict(state.errors),
             score_history=dict(state.score_history),
+            gap_inferences=dict(state.gap_inferences),
             current_concept=current_topic,
             recommendation=rec,
         )

@@ -57,7 +57,7 @@ class QuizResult:
 @dataclass
 class AdaptiveRecommendation:
     """Actionable recommendation produced by the adaptive learner model."""
-    action: str  # recommend_prerequisite | recommend_targeted_review | advance | reinforce_current_concept
+    action: str  # advance | gather_evidence | targeted_remediation | recommend_prerequisite | recommend_targeted_review | reinforce_current_concept
     target: str | list[str] | None
     reason: str
     concept_id: str | None = None
@@ -75,7 +75,8 @@ class AdaptiveRecommendation:
 class LearnerState:
     """
     Persistent state of an individual learner tracking concept performance,
-    history trajectories, and error records.
+    history trajectories, error records, empirical evidence history, and
+    derived gap inferences.
     """
     user_id: str
     concept_scores: dict[str, float] = field(default_factory=dict)
@@ -83,6 +84,8 @@ class LearnerState:
     errors: dict[str, list[str]] = field(default_factory=dict)
     score_history: dict[str, list[float]] = field(default_factory=dict)
     last_updated: dict[str, float] = field(default_factory=dict)
+    evidence_history: list[dict[str, Any]] = field(default_factory=list)
+    gap_inferences: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def record_attempt(self, topic: str, score: float, wrong_questions: list[str]) -> None:
         """Record the outcome of a quiz attempt, updating history and timestamps."""
@@ -108,6 +111,7 @@ class LearnerContext:
     attempts: dict[str, int] = field(default_factory=dict)
     errors: dict[str, list[str]] = field(default_factory=dict)
     score_history: dict[str, list[float]] = field(default_factory=dict)
+    gap_inferences: dict[str, dict[str, Any]] = field(default_factory=dict)
     current_concept: Optional[str] = None
     recommendation: Optional[AdaptiveRecommendation] = None
 
@@ -120,6 +124,7 @@ class LearnerContext:
             "attempts": self.attempts,
             "errors": self.errors,
             "score_history": self.score_history,
+            "gap_inferences": self.gap_inferences,
             "current_concept": self.current_concept,
             "recommendation": rec_dict,
         }
