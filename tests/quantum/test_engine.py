@@ -41,19 +41,33 @@ def test_run_experiment_custom_shots():
     assert result.counts.get("01") == 500
 
 
-def test_run_experiment_unsupported_qubits_for_grover():
-    # num_qubits=3 is allowed by QuantumExperiment schema and validator,
-    # but the Grover implementation currently only supports 2 qubits.
+@pytest.mark.parametrize(
+    "num_qubits,target_state,iterations",
+    [
+        (3, "101", 2),
+        (4, "0110", 3),
+        (5, "10101", 4),
+    ],
+)
+def test_run_experiment_multi_qubits(num_qubits, target_state, iterations):
     experiment = QuantumExperiment(
         algorithm="grover",
-        num_qubits=3,
-        target_state="101",
-        iterations=1,
+        num_qubits=num_qubits,
+        target_state=target_state,
+        iterations=iterations,
         shots=1024,
     )
 
-    with pytest.raises(NotImplementedError, match="currently only supports 2 qubits"):
-        run_experiment(experiment)
+    result = run_experiment(experiment)
+
+    assert isinstance(result, SimulationResult)
+    assert result.algorithm == "grover"
+    assert result.target_state == target_state
+    assert result.shots == 1024
+    top_state = max(result.counts, key=result.counts.get)
+    assert top_state == target_state
+    assert result.probabilities[target_state] > 0.8
+
 
 
 def test_run_experiment_validation_error():

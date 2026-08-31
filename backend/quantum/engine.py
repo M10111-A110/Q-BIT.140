@@ -10,12 +10,6 @@ def run_experiment(experiment: QuantumExperiment) -> SimulationResult:
 
     algorithm = get_algorithm(experiment.algorithm)
 
-    if experiment.num_qubits != 2:
-        raise NotImplementedError(
-            f"Grover's algorithm currently only supports 2 qubits, "
-            f"got {experiment.num_qubits} qubits."
-        )
-
     circuit = algorithm(
         num_qubits=experiment.num_qubits,
         target_state=experiment.target_state,
