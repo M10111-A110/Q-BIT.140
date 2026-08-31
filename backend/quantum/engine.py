@@ -1,6 +1,6 @@
 from .execution import execute_circuit
 from .registry import get_algorithm
-from .results import SimulationResult
+from .results import SimulationResult, extract_circuit_metadata
 from .schemas import QuantumExperiment
 from .validator import validate_experiment
 
@@ -17,10 +17,12 @@ def run_experiment(experiment: QuantumExperiment) -> SimulationResult:
     )
 
     counts = execute_circuit(circuit, shots=experiment.shots)
+    circuit_metadata = extract_circuit_metadata(circuit)
 
     return SimulationResult(
         algorithm=experiment.algorithm,
         target_state=experiment.target_state,
         shots=experiment.shots,
         counts=counts,
-    )
+        circuit=circuit_metadata,
+    )

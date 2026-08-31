@@ -119,3 +119,88 @@ def test_run_experiment_orchestration_isolated():
     assert result.target_state == "10"
     assert result.shots == 256
     assert result.counts == fake_counts
+
+
+# ---------------------------------------------------------------------------
+# Circuit metadata integration tests
+# ---------------------------------------------------------------------------
+
+def test_run_experiment_result_has_circuit_metadata():
+    """run_experiment() must return a result with populated CircuitMetadata."""
+    from backend.quantum.results import CircuitMetadata
+
+    experiment = QuantumExperiment(
+        algorithm="grover",
+        num_qubits=2,
+        target_state="11",
+        iterations=1,
+        shots=1024,
+    )
+
+    result = run_experiment(experiment)
+
+    assert result.circuit is not None
+    assert isinstance(result.circuit, CircuitMetadata)
+    assert result.circuit.num_qubits == 2
+    assert result.circuit.num_clbits == 2
+    assert result.circuit.depth > 0
+    assert "measure" in result.circuit.gate_counts
+    assert result.circuit.gate_counts["measure"] == 2
+    assert isinstance(result.circuit.diagram, str)
+    assert len(result.circuit.diagram.strip()) > 0
+
+
+@pytest.mark.parametrize(
+    "num_qubits,target_state,iterations",
+    [
+        (2, "11", 1),
+        (3, "101", 2),
+        (4, "0110", 3),
+        (5, "10101", 4),
+    ],
+)
+def test_run_experiment_circuit_metadata_qubit_count_matches(
+    num_qubits, target_state, iterations
+):
+    """CircuitMetadata.num_qubits must match the experiment's num_qubits."""
+    experiment = QuantumExperiment(
+        algorithm="grover",
+        num_qubits=num_qubits,
+        target_state=target_state,
+        iterations=iterations,
+        shots=1024,
+    )
+
+    result = run_experiment(experiment)
+
+    assert result.circuit is not None
+    assert result.circuit.num_qubits == num_qubits
+
+
+def test_run_experiment_result_is_json_serializable():
+    """run_experiment() result must be fully serializable via to_dict()."""
+    import json
+
+    experiment = QuantumExperiment(
+        algorithm="grover",
+        num_qubits=2,
+        target_state="11",
+        iterations=1,
+        shots=1024,
+    )
+
+    result = run_experiment(experiment)
+
+    # Must not raise
+    serialized = json.dumps(result.to_dict())
+    reloaded = json.loads(serialized)
+
+    assert reloaded["algorithm"] == "grover"
+    assert reloaded["target_state"] == "11"
+    assert reloaded["shots"] == 1024
+    assert "counts" in reloaded
+    assert "probabilities" in reloaded
+    assert "target_probability" in reloaded
+    assert "most_likely_state" in reloaded
+    assert reloaded["circuit"]["num_qubits"] == 2
+    assert reloaded["circuit"]["depth"] > 0
