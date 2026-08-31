@@ -23,3 +23,11 @@ class SimulationResult:
             state: count/self.shots
             for state, count in self.counts.items()
         }
+
+    @property
+    def target_probability(self)->float:
+        return self.counts.get(self.target_state, 0)/ self.shots
+
+    @property
+    def most_likely_state(self)->str:
+        return max(self.counts, key=self.counts.get)

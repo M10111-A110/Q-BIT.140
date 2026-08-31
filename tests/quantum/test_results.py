@@ -57,4 +57,36 @@ def test_simulation_result_calculates_probabilities():
     )
 
     assert result.probabilities == {"00": 0.25, "11": 0.75}
-    assert sum(result.probabilities.values()) == 1.0
+    assert sum(result.probabilities.values()) == 1.0
+
+
+def test_target_probability():
+    result = SimulationResult(
+            algorithm="grover",
+            target_state="11",
+            shots=1000,
+            counts={"00": 100, "11": 900},
+        )
+
+    assert result.target_probability == 0.9
+
+def test_most_likely_state():
+    result = SimulationResult(
+            algorithm="grover",
+            target_state="11",
+            shots=1000,
+            counts={"00": 100, "11": 900},
+        )
+
+    assert result.most_likely_state == "11"
+
+def test_target_probability_when_not_most_likely():
+    result = SimulationResult(
+            algorithm="grover",
+            target_state="11",
+            shots=1000,
+            counts={"00": 800, "11": 200},
+        )
+
+    assert result.target_probability == 0.2
+    assert result.most_likely_state == "00"
