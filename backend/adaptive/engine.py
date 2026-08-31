@@ -3,9 +3,10 @@ from __future__ import annotations
 import time
 from typing import Any, Optional
 
-from .activities import MVP_ACTIVITIES, get_activity
+from .activities import MVP_ACTIVITIES, get_activities_for_concept, get_activity
 from .concepts import (
     CONCEPT_GRAPH,
+    get_concept,
     get_concept_display_name,
     resolve_concept_id,
 )
@@ -24,7 +25,8 @@ class LearnerModel:
     """
     Cognitive mastery model and adaptive decision engine.
     Ties together concept prerequisite dependencies, diagnostic evidence,
-    historical improvement, error penalties, and deterministic explainable routing.
+    historical improvement, error penalties, deterministic trajectory trend analysis,
+    and prerequisite-aware adaptive routing.
     """
 
     def __init__(
@@ -54,6 +56,47 @@ class LearnerModel:
 
         mastery = diag_score + improvement - error_penalty
         return round(max(0.0, min(1.0, mastery)), 3)
+
+    def find_unmastered_prerequisite(
+        self,
+        concept_id: str,
+        state: LearnerState,
+    ) -> Optional[str]:
+        """
+        Traverse concept dependencies (via concept DAG or registered activities)
+        to find the earliest unsatisfied prerequisite with active errors or low mastery.
+        Returns the canonical concept ID of the unmastered prerequisite, or None.
+        """
+        canonical = resolve_concept_id(concept_id)
+        prereqs: list[str] = []
+
+        concept_obj = get_concept(canonical)
+        if concept_obj and concept_obj.prerequisites:
+            prereqs.extend(concept_obj.prerequisites)
+
+        # Also inspect prerequisite links from mapped activities
+        activities = get_activities_for_concept(canonical)
+        for act in activities:
+            for p in act.prerequisites:
+                if p not in prereqs:
+                    prereqs.append(p)
+
+        # Priority 1: Check if any prerequisite has explicit active errors
+        for prereq_id in prereqs:
+            prereq_canonical = resolve_concept_id(prereq_id)
+            prereq_name = get_concept_display_name(prereq_canonical)
+            if len(state.errors.get(prereq_name, [])) > 0:
+                return prereq_canonical
+
+        # Priority 2: Check if any prerequisite has low mastery
+        for prereq_id in prereqs:
+            prereq_canonical = resolve_concept_id(prereq_id)
+            prereq_name = get_concept_display_name(prereq_canonical)
+            prereq_mastery = self.compute_mastery(prereq_name, state)
+            if prereq_name in state.concept_scores and prereq_mastery < self.threshold:
+                return prereq_canonical
+
+        return None
 
     def recommend_next(self, topic: str, state: LearnerState) -> AdaptiveRecommendation:
         """
@@ -128,7 +171,8 @@ class LearnerModel:
     ) -> AdaptiveRecommendation:
         """
         Ingest an empirical LearnerEvidence observation, accumulate historical evidence,
-        derive calibrated gap inferences, and return a deterministic adaptive recommendation.
+        derive calibrated gap inferences with trajectory trend analysis, and return
+        a deterministic adaptive recommendation.
         """
         if isinstance(evidence, dict):
             evidence = LearnerEvidence.from_dict(evidence)
@@ -156,7 +200,7 @@ class LearnerModel:
             if display_name in state.errors and len(state.errors[display_name]) > 0:
                 state.errors[display_name] = []
 
-        # 4. Deterministic Gap Inference from Accumulated Evidence
+        # 4. Deterministic Gap Inference & Trend Classification
         concept_evidence = [
             e for e in state.evidence_history
             if resolve_concept_id(e.get("concept_id", "")) == canonical_concept
@@ -165,22 +209,35 @@ class LearnerModel:
         recent_errors = [e for e in recent if not e.get("is_correct", False)]
         recent_successes = [e for e in recent if e.get("is_correct", False)]
 
-        if len(recent_errors) == 0 and len(recent_successes) >= 1:
+        prereq_gap: Optional[str] = None
+
+        if len(recent) >= 2 and recent[-1].get("is_correct", False) and recent[-2].get("is_correct", False):
+            # 2 consecutive recent successes -> stable mastery
             confidence = 0.0
             status = "mastered"
+            trend = "stable_mastery"
+            desc = f"Evidence demonstrates consistent understanding of {display_name} across multiple attempts."
+        elif len(recent_errors) == 0 and len(recent_successes) >= 1:
+            confidence = 0.0
+            status = "mastered"
+            trend = "mastered"
             desc = f"Evidence demonstrates consistent understanding of {display_name}."
         elif evidence.is_correct and len(concept_evidence) >= 2 and not concept_evidence[-2].get("is_correct", False):
             confidence = 0.15
             status = "improving"
+            trend = "improving"
             desc = f"Evidence indicates post-intervention improvement in {display_name}."
         elif len(recent_errors) == 1:
             confidence = 0.35  # Low confidence: single error is not proof of misconception
             status = "observing"
+            trend = "preliminary_observation"
             desc = f"Evidence is consistent with possible difficulty in {display_name} (preliminary observation from 1 incorrect attempt)."
         else:
-            # 2 or more recent errors
+            # 2 or more recent errors -> persistent difficulty
             confidence = min(0.40 + len(recent_errors) * 0.25, 0.90)
             status = "remediation_needed"
+            trend = "persistent_difficulty"
+            prereq_gap = self.find_unmastered_prerequisite(canonical_concept, state)
             desc = f"Evidence is consistent with possible difficulty in {display_name} supported by {len(recent_errors)} repeated incorrect attempts."
 
         inference = GapInference(
@@ -189,6 +246,8 @@ class LearnerModel:
             status=status,
             supporting_evidence_count=len(recent_errors),
             description=desc,
+            trend=trend,
+            prerequisite_concept_id=prereq_gap,
         )
         state.gap_inferences[canonical_concept] = inference.to_dict()
 
@@ -223,11 +282,22 @@ class LearnerModel:
                 )
 
             # Case C: Repeated errors (>= 2) -> targeted remediation
-            if activity.remediation_activity_id:
-                remed_act = get_activity(activity.remediation_activity_id)
+            # Default to activity's configured remediation
+            remediation_target = activity.remediation_activity_id
+
+            # If an explicit prerequisite gap was identified with active errors, route to that prerequisite
+            if prereq_gap:
+                prereq_name = get_concept_display_name(prereq_gap)
+                if len(state.errors.get(prereq_name, [])) > 0:
+                    prereq_activities = get_activities_for_concept(prereq_gap)
+                    if prereq_activities:
+                        remediation_target = prereq_activities[0].activity_id
+
+            if remediation_target and remediation_target in MVP_ACTIVITIES:
+                remed_act = get_activity(remediation_target)
                 return AdaptiveRecommendation(
                     action="targeted_remediation",
-                    target=activity.remediation_activity_id,
+                    target=remediation_target,
                     reason=f"Repeated prediction errors provide evidence consistent with possible difficulty in {display_name}. Recommending targeted remediation in '{remed_act.title}'.",
                     concept_id=canonical_concept,
                 )

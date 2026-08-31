@@ -128,6 +128,8 @@ class GapInference:
     status: str        # mastered | observing | remediation_needed | improving | unassessed
     supporting_evidence_count: int
     description: str
+    trend: str = "unassessed"  # stable_mastery | improving | persistent_difficulty | preliminary_observation | regressing | unassessed
+    prerequisite_concept_id: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize GapInference into a JSON-compatible dictionary."""
@@ -139,12 +141,18 @@ class GapInference:
         if not isinstance(d, dict):
             raise TypeError("GapInference.from_dict requires a dictionary")
 
+        prereq = d.get("prerequisite_concept_id")
+        if prereq is not None:
+            prereq = resolve_concept_id(prereq)
+
         return cls(
             concept_id=resolve_concept_id(d.get("concept_id", "")),
             confidence=float(d.get("confidence", 0.0)),
             status=str(d.get("status", "unassessed")),
             supporting_evidence_count=int(d.get("supporting_evidence_count", 0)),
             description=str(d.get("description", "")),
+            trend=str(d.get("trend", "unassessed")),
+            prerequisite_concept_id=prereq,
         )
 
 
