@@ -1,3 +1,4 @@
+import json
 import pytest
 from backend.adaptive.activities import get_activity
 from backend.adaptive.engine import LearnerModel
@@ -43,6 +44,120 @@ def test_evidence_construction_and_serialization():
     d = evidence.to_dict()
     assert d["learner_id"] == "user_123"
     assert d["verified_result"]["algorithm"] == "grover"
+
+
+def test_learner_evidence_round_trip_serialization():
+    mock_sim_result = {
+        "algorithm": "grover",
+        "target_state": "10",
+        "shots": 1024,
+        "counts": {"00": 20, "01": 20, "10": 960, "11": 24},
+        "probabilities": {"00": 0.0195, "01": 0.0195, "10": 0.9375, "11": 0.0234},
+        "target_probability": 0.9375,
+        "most_likely_state": "10",
+    }
+
+    original = evaluate_quantum_prediction(
+        learner_id="user_roundtrip",
+        activity_id="act_grover_2q_predict",
+        concept_id="grover.search_problem",
+        prediction="10",
+        simulation_result=mock_sim_result,
+        attempt_number=2,
+        metadata={"session_id": "sess_abc"},
+    )
+
+    # Serialize to dict and JSON string
+    serialized_dict = original.to_dict()
+    json_str = json.dumps(serialized_dict)
+
+    # Deserialize back
+    deserialized_dict = json.loads(json_str)
+    reconstituted = LearnerEvidence.from_dict(deserialized_dict)
+
+    assert reconstituted.learner_id == original.learner_id
+    assert reconstituted.activity_id == original.activity_id
+    assert reconstituted.concept_id == original.concept_id
+    assert reconstituted.learner_response == original.learner_response
+    assert reconstituted.is_correct == original.is_correct
+    assert reconstituted.attempt_number == original.attempt_number
+    assert reconstituted.verified_result == original.verified_result
+    assert reconstituted.evaluation_details == original.evaluation_details
+    assert reconstituted.metadata == original.metadata
+
+
+def test_learner_evidence_from_dict_validation():
+    # Missing learner_id
+    with pytest.raises(ValueError, match="learner_id"):
+        LearnerEvidence.from_dict({"activity_id": "act1", "concept_id": "grover"})
+
+    # Missing activity_id
+    with pytest.raises(ValueError, match="activity_id"):
+        LearnerEvidence.from_dict({"learner_id": "u1", "concept_id": "grover"})
+
+    # Missing concept_id
+    with pytest.raises(ValueError, match="concept_id"):
+        LearnerEvidence.from_dict({"learner_id": "u1", "activity_id": "act1"})
+
+    # Not a dictionary
+    with pytest.raises(TypeError):
+        LearnerEvidence.from_dict("not_a_dict")  # type: ignore
+
+
+def test_non_json_serializable_evidence_rejected():
+    class NonSerializableClass:
+        pass
+
+    with pytest.raises(ValueError, match="non-JSON-serializable"):
+        LearnerEvidence(
+            learner_id="u1",
+            activity_id="act1",
+            concept_id="grover.search_problem",
+            learner_response="01",
+            is_correct=False,
+            verified_result={"invalid_obj": NonSerializableClass()},
+        )
+
+
+def test_learner_state_round_trip_serialization():
+    state = LearnerState(user_id="usr_state_test")
+    state.record_attempt("Superposition", 0.8, ["Q3"])
+    state.gap_inferences["quantum.superposition"] = {
+        "concept_id": "quantum.superposition",
+        "confidence": 0.15,
+        "status": "improving",
+        "supporting_evidence_count": 1,
+        "description": "Improving.",
+    }
+
+    raw = state.to_dict()
+    json_str = json.dumps(raw)
+    loaded = LearnerState.from_dict(json.loads(json_str))
+
+    assert loaded.user_id == "usr_state_test"
+    assert loaded.concept_scores["Superposition"] == 0.8
+    assert loaded.gap_inferences["quantum.superposition"]["status"] == "improving"
+
+
+def test_record_evidence_accepts_dictionary():
+    model = LearnerModel()
+    state = LearnerState(user_id="u1")
+
+    evidence_dict = {
+        "learner_id": "u1",
+        "activity_id": "act_grover_2q_predict",
+        "concept_id": "grover.search_problem",
+        "learner_response": "10",
+        "is_correct": True,
+        "attempt_number": 1,
+        "verified_result": {"most_likely_state": "10"},
+        "evaluation_details": {"match": True},
+    }
+
+    # Pass raw dictionary instead of object
+    decision = model.record_evidence(evidence_dict, state)
+    assert decision.action == "advance"
+    assert len(state.evidence_history) == 1
 
 
 def test_prediction_mismatch_evaluation():

@@ -1,14 +1,31 @@
 from __future__ import annotations
 
+import os
+from typing import Optional
+
 from backend.adaptive import (
     InMemoryLearnerRepository,
     LearnerModel,
     LearnerRepository,
+    SupabaseLearnerRepository,
 )
 from backend.ai import LLMProvider, MockLLMProvider, get_default_provider
 
-# Global singleton instances for in-memory MVP lifecycle
-_GLOBAL_REPOSITORY: LearnerRepository = InMemoryLearnerRepository()
+
+def _create_default_repository() -> LearnerRepository:
+    """Factory creating Supabase repository if credentials exist, else in-memory store."""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    if supabase_url and supabase_key:
+        try:
+            return SupabaseLearnerRepository(url=supabase_url, key=supabase_key)
+        except Exception:
+            return InMemoryLearnerRepository()
+    return InMemoryLearnerRepository()
+
+
+# Global singleton instances for API lifecycle
+_GLOBAL_REPOSITORY: LearnerRepository = _create_default_repository()
 _GLOBAL_MODEL: LearnerModel = LearnerModel()
 _GLOBAL_LLM_PROVIDER: LLMProvider = get_default_provider()
 
@@ -16,6 +33,12 @@ _GLOBAL_LLM_PROVIDER: LLMProvider = get_default_provider()
 def get_learner_repository() -> LearnerRepository:
     """Dependency provider for learner state persistence repository."""
     return _GLOBAL_REPOSITORY
+
+
+def set_learner_repository(repo: LearnerRepository) -> None:
+    """Explicitly override learner repository (useful for testing or switching store)."""
+    global _GLOBAL_REPOSITORY
+    _GLOBAL_REPOSITORY = repo
 
 
 def get_learner_model() -> LearnerModel:

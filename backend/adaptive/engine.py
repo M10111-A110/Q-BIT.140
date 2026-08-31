@@ -123,13 +123,16 @@ class LearnerModel:
 
     def record_evidence(
         self,
-        evidence: LearnerEvidence,
+        evidence: LearnerEvidence | dict[str, Any],
         state: LearnerState,
     ) -> AdaptiveRecommendation:
         """
         Ingest an empirical LearnerEvidence observation, accumulate historical evidence,
         derive calibrated gap inferences, and return a deterministic adaptive recommendation.
         """
+        if isinstance(evidence, dict):
+            evidence = LearnerEvidence.from_dict(evidence)
+
         canonical_concept = resolve_concept_id(evidence.concept_id)
         display_name = get_concept_display_name(canonical_concept)
 

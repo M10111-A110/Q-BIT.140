@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-BIT.140 — Interactive Quantum Circuit Builder & Adaptive Verification</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --bg-secondary: #111827;
+            --panel: #1a2234;
+            --panel-border: rgba(91, 140, 255, 0.18);
+            --panel-border-hi: rgba(91, 140, 255, 0.45);
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.35);
+            --cyan: #22d3ee;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --grid-line: #334155;
+            --wire: #64748b;
+            --gate-bg: #1e3a8a;
+            --gate-text: #ffffff;
+            --font-display: "Space Grotesk", sans-serif;
+            --font-body: "Inter", sans-serif;
+            --font-mono: "JetBrains Mono", monospace;
+        }
+
+        [data-theme="light"] {
+            --bg: #f8fafc;
+            --bg-secondary: #ffffff;
+            --panel: #f1f5f9;
+            --panel-border: rgba(59, 130, 246, 0.2);
+            --panel-border-hi: rgba(59, 130, 246, 0.4);
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --accent: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.2);
+            --cyan: #0891b2;
+            --green: #059669;
+            --yellow: #d97706;
+            --red: #dc2626;
+            --grid-line: #cbd5e1;
+            --wire: #94a3b8;
+            --gate-bg: #dbeafe;
+            --gate-text: #1e3a8a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        header {
+            padding: 16px 28px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brand-title {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #fff, var(--cyan));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        [data-theme="light"] .brand-title {
+            background: linear-gradient(90deg, #0f172a, var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .brand-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+
+        .theme-btn {
+            background: var(--panel);
+            color: var(--text);
+            border: 1px solid var(--panel-border);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .theme-btn:hover { border-color: var(--accent); }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr 420px;
+            flex: 1;
+            overflow: hidden;
+            height: calc(100vh - 65px);
+        }
+
+        /* SIDEBAR (Gate toolbox) */
+        .sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--panel-border);
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .gate-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .gate-btn {
+            background: var(--gate-bg);
+            color: var(--gate-text);
+            border: 1px solid var(--panel-border);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            cursor: grab;
+            text-align: center;
+            user-select: none;
+            transition: 0.15s;
+        }
+        .gate-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px var(--accent-glow); }
+
+        .btn-group { display: flex; flex-direction: column; gap: 6px; }
+        .ctrl-btn {
+            background: var(--panel);
+            color: var(--text);
+            border: 1px solid var(--panel-border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: var(--font-body);
+            cursor: pointer;
+            text-align: left;
+            transition: 0.15s;
+        }
+        .ctrl-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        .ctrl-btn.danger:hover { background: var(--red); border-color: var(--red); }
+
+        /* CENTER (Circuit Grid Canvas) */
+        .center-area {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            overflow-y: auto;
+            border-right: 1px solid var(--panel-border);
+        }
+        .circuit-toolbar {
+            padding: 12px 20px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .canvas-container {
+            padding: 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .wire-grid {
+            background: var(--bg-secondary);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 240px;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .wire-row {
+            display: flex;
+            align-items: center;
+            height: 52px;
+            position: relative;
+        }
+        .wire-label {
+            width: 48px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--cyan);
+            font-weight: 600;
+        }
+        .wire-line {
+            flex: 1;
+            height: 2px;
+            background: var(--wire);
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .grid-slot {
+            width: 44px;
+            height: 44px;
+            margin-right: 12px;
+            border: 1px dashed var(--grid-line);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.15s;
+            position: relative;
+            z-index: 2;
+            background: var(--bg-secondary);
+        }
+        .grid-slot:hover { border-color: var(--accent); background: var(--panel); }
+        .placed-gate {
+            background: var(--gate-bg);
+            color: var(--gate-text);
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 13px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        /* RIGHT PANEL (Experiment, Verification, M2 & M5) */
+        .right-panel {
+            background: var(--bg-secondary);
+            padding: 18px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-title {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--cyan);
+        }
+
+        .badge {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: var(--bg);
+            border: 1px solid var(--panel-border);
+        }
+        .badge.success { color: var(--green); border-color: var(--green); }
+        .badge.mismatch { color: var(--red); border-color: var(--red); }
+        .badge.action { color: var(--yellow); border-color: var(--yellow); }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .stat-box {
+            background: var(--bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+        .stat-label { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase; }
+        .stat-val { font-size: 14px; font-weight: 700; font-family: var(--font-mono); color: var(--text); margin-top: 2px; }
+
+        /* Histogram bars */
+        .hist-container { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+        .hist-row { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; }
+        .hist-state { width: 38px; color: var(--cyan); font-weight: 600; }
+        .hist-bar-bg {
+            flex: 1;
+            height: 16px;
+            background: var(--bg);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .hist-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--cyan));
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+        .hist-bar-fill.target { background: linear-gradient(90deg, #10b981, #34d399); }
+        .hist-pct { width: 44px; text-align: right; color: var(--text-muted); font-size: 11px; }
+
+        .input-group { display: flex; gap: 8px; align-items: center; }
+        .text-input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--panel-border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+        .text-input:focus { outline: none; border-color: var(--accent); }
+        .action-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 9px 16px;
+            border-radius: 6px;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .action-btn:hover { background: #1d4ed8; }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .explanation-box {
+            background: var(--bg);
+            border-left: 3px solid var(--cyan);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text);
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        pre.circuit-ascii {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            background: var(--bg);
+            padding: 8px;
+            border-radius: 6px;
+            overflow-x: auto;
+            color: var(--cyan);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1 class="brand-title">Q-BIT.140</h1>
+        <div class="brand-sub">Interactive Quantum Engine & Adaptive Verification</div>
+    </div>
+    <button class="theme-btn" id="themeToggleBtn" onclick="toggleTheme()">☀️ Light Mode</button>
+</header>
+
+<div class="layout">
+    <!-- LEFT: Gate Toolbox -->
+    <aside class="sidebar">
+        <div>
+            <div class="section-title">Quantum Gates</div>
+            <div class="gate-grid">
+                <div class="gate-btn" onclick="selectGateTool('H')">H</div>
+                <div class="gate-btn" onclick="selectGateTool('X')">X</div>
+                <div class="gate-btn" onclick="selectGateTool('Y')">Y</div>
+                <div class="gate-btn" onclick="selectGateTool('Z')">Z</div>
+                <div class="gate-btn" onclick="selectGateTool('S')">S</div>
+                <div class="gate-btn" onclick="selectGateTool('T')">T</div>
+                <div class="gate-btn" onclick="selectGateTool('CZ')">CZ</div>
+                <div class="gate-btn" onclick="selectGateTool('M')">M</div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">Circuit Controls</div>
+            <div class="btn-group">
+                <button class="ctrl-btn" onclick="addQubit()">+ Add Qubit</button>
+                <button class="ctrl-btn" onclick="removeQubit()">− Remove Qubit</button>
+                <button class="ctrl-btn" onclick="addColumn()">+ Add Column</button>
+                <button class="ctrl-btn" onclick="removeColumn()">− Remove Column</button>
+                <button class="ctrl-btn danger" onclick="clearCircuit()">Clear Circuit</button>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">API Connection</div>
+            <div style="font-size: 11px; font-family: var(--font-mono); color: var(--green);">
+                ● Connected to M4 Gateway
+            </div>
+        </div>
+    </aside>
+
+    <!-- CENTER: Circuit Wire Grid -->
+    <main class="center-area">
+        <div class="circuit-toolbar">
+            <span style="font-family: var(--font-mono); font-size: 13px; color: var(--text-muted);">
+                Selected Gate: <strong id="activeToolDisplay" style="color: var(--cyan);">None</strong>
+            </span>
+            <button class="ctrl-btn" onclick="presetGrover2Q()">Load 2-Qubit Grover Circuit</button>
+        </div>
+
+        <div class="canvas-container">
+            <div class="wire-grid" id="wireGrid"></div>
+            
+            <div class="card" id="asciiDiagramCard" style="display: none;">
+                <div class="card-header">
+                    <span class="card-title">M3 Verified Qiskit Circuit Diagram</span>
+                    <span class="badge" id="circuitDepthBadge">Depth: 5</span>
+                </div>
+                <pre class="circuit-ascii" id="circuitAsciiDiagram"></pre>
+            </div>
+        </div>
+    </main>
+
+    <!-- RIGHT: Activity, Prediction, M3 Simulation, M2 Adaptive Decision, M5 Guidance -->
+    <aside class="right-panel">
+        <!-- 1. Activity & Prediction Input -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title" id="activityTitle">Grover 2-Qubit Target Prediction</span>
+                <span class="badge" id="activityConceptBadge">grover.search_problem</span>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;" id="activityPrompt">
+                A 2-qubit Grover search circuit has been initialized with equal superposition and executed with 1 Grover iteration marking target state |10⟩. Predict the measurement outcome.
+            </p>
+            <div class="input-group">
+                <input type="text" class="text-input" id="predictionInput" value="01" placeholder="Enter basis state (e.g. 01, 10)">
+                <button class="action-btn" id="submitBtn" onclick="handleRunExperiment()">Run & Evaluate</button>
+            </div>
+        </div>
+
+        <!-- 2. Real M3 Quantum Simulation Results -->
+        <div class="card" id="quantumResultsCard" style="display: none;">
+            <div class="card-header">
+                <span class="card-title">M3 Verified Quantum Result</span>
+                <span class="badge" id="algorithmBadge">Grover (1024 shots)</span>
+            </div>
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Target State</div>
+                    <div class="stat-val" style="color: var(--green);" id="targetStateVal">|10⟩</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Most Likely</div>
+                    <div class="stat-val" id="mostLikelyVal">|10⟩</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Target Prob</div>
+                    <div class="stat-val" style="color: var(--cyan);" id="targetProbVal">93.5%</div>
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top: 6px;">Measured Probabilities & Counts</div>
+            <div class="hist-container" id="histogramContainer"></div>
+        </div>
+
+        <!-- 3. M2 Learner Evidence & Adaptive Decision -->
+        <div class="card" id="adaptiveDecisionCard" style="display: none;">
+            <div class="card-header">
+                <span class="card-title">M2 Adaptive Cognition</span>
+                <span class="badge" id="outcomeBadge">Prediction Mismatch</span>
+            </div>
+            <div style="font-size: 12px; line-height: 1.4;">
+                <div><strong>Action:</strong> <span class="badge action" id="decisionActionBadge">gather_evidence</span></div>
+                <div style="margin-top: 6px; color: var(--text-muted);" id="decisionReasonText">
+                    Initial prediction mismatch on 'Grover 2-Qubit Target State Prediction'. Gathering additional evidence before selecting remediation.
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; font-family: var(--font-mono); color: var(--cyan);" id="nextActivityText">
+                    Next Target: act_grover_2q_predict
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. M5 Grounded AI Guidance -->
+        <div class="card" id="aiGuidanceCard" style="display: none;">
+            <div class="card-header">
+                <span class="card-title">M5 Grounded AI Guidance</span>
+                <button class="ctrl-btn" style="padding: 4px 10px; font-size: 11px;" id="explainBtn" onclick="handleExplain()">Explain My Result</button>
+            </div>
+            <div class="explanation-box" id="aiExplanationBox">Click "Explain My Result" to generate a grounded explanation from the M5 curriculum knowledge base.</div>
+        </div>
+    </aside>
+</div>
+
+<script type="module">
+    import { fetchActivity, submitPrediction, explainExperiment } from './api_client.js';
+    import { normalizeSubmissionResponse, formatStateLabel, formatPercentage } from './adapter.js';
+
+    let currentActivityId = "act_grover_2q_predict";
+    let lastSubmitData = null;
+    let selectedGate = null;
+
+    let circuit = {
+        num_qubits: 2,
+        num_columns: 6,
+        gates: [
+            { id: 1, type: "H", qubit: 0, column: 0 },
+            { id: 2, type: "H", qubit: 1, column: 0 },
+            { id: 3, type: "X", qubit: 0, column: 1 },
+            { id: 4, type: "CZ", qubit: 1, column: 2 },
+            { id: 5, type: "X", qubit: 0, column: 3 },
+            { id: 6, type: "H", qubit: 0, column: 4 },
+            { id: 7, type: "H", qubit: 1, column: 4 },
+            { id: 8, type: "M", qubit: 0, column: 5 },
+            { id: 9, type: "M", qubit: 1, column: 5 },
+        ]
+    };
+
+    window.selectGateTool = function(type) {
+        selectedGate = type;
+        document.getElementById('activeToolDisplay').textContent = type;
+    };
+
+    window.addQubit = function() {
+        if (circuit.num_qubits < 5) {
+            circuit.num_qubits++;
+            renderGrid();
+        }
+    };
+
+    window.removeQubit = function() {
+        if (circuit.num_qubits > 1) {
+            circuit.num_qubits--;
+            circuit.gates = circuit.gates.filter(g => g.qubit < circuit.num_qubits);
+            renderGrid();
+        }
+    };
+
+    window.addColumn = function() {
+        circuit.num_columns++;
+        renderGrid();
+    };
+
+    window.removeColumn = function() {
+        if (circuit.num_columns > 2) {
+            circuit.num_columns--;
+            circuit.gates = circuit.gates.filter(g => g.column < circuit.num_columns);
+            renderGrid();
+        }
+    };
+
+    window.clearCircuit = function() {
+        circuit.gates = [];
+        renderGrid();
+    };
+
+    window.presetGrover2Q = function() {
+        circuit = {
+            num_qubits: 2,
+            num_columns: 6,
+            gates: [
+                { id: 1, type: "H", qubit: 0, column: 0 },
+                { id: 2, type: "H", qubit: 1, column: 0 },
+                { id: 3, type: "X", qubit: 0, column: 1 },
+                { id: 4, type: "CZ", qubit: 1, column: 2 },
+                { id: 5, type: "X", qubit: 0, column: 3 },
+                { id: 6, type: "H", qubit: 0, column: 4 },
+                { id: 7, type: "H", qubit: 1, column: 4 },
+                { id: 8, type: "M", qubit: 0, column: 5 },
+                { id: 9, type: "M", qubit: 1, column: 5 },
+            ]
+        };
+        renderGrid();
+    };
+
+    function renderGrid() {
+        const container = document.getElementById('wireGrid');
+        container.innerHTML = '';
+
+        for (let q = 0; q < circuit.num_qubits; q++) {
+            const row = document.createElement('div');
+            row.className = 'wire-row';
+
+            const label = document.createElement('div');
+            label.className = 'wire-label';
+            label.textContent = `q_${q}:`;
+            row.appendChild(label);
+
+            const line = document.createElement('div');
+            line.className = 'wire-line';
+
+            for (let c = 0; c < circuit.num_columns; c++) {
+                const slot = document.createElement('div');
+                slot.className = 'grid-slot';
+                slot.dataset.qubit = q;
+                slot.dataset.column = c;
+
+                const gate = circuit.gates.find(g => g.qubit === q && g.column === c);
+                if (gate) {
+                    const gateEl = document.createElement('div');
+                    gateEl.className = 'placed-gate';
+                    gateEl.textContent = gate.type;
+                    slot.appendChild(gateEl);
+                }
+
+                slot.onclick = () => handleSlotClick(q, c);
+                line.appendChild(slot);
+            }
+
+            row.appendChild(line);
+            container.appendChild(row);
+        }
+    }
+
+    function handleSlotClick(q, c) {
+        const existingIdx = circuit.gates.findIndex(g => g.qubit === q && g.column === c);
+        if (existingIdx >= 0) {
+            circuit.gates.splice(existingIdx, 1);
+        } else if (selectedGate) {
+            circuit.gates.push({
+                id: Date.now(),
+                type: selectedGate,
+                qubit: q,
+                column: c
+            });
+        }
+        renderGrid();
+    }
+
+    window.handleRunExperiment = async function() {
+        const pred = document.getElementById('predictionInput').value.trim();
+        if (!pred) return alert('Please enter a prediction (e.g. 10 or 01)');
+
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Simulating...';
+
+        try {
+            const rawResponse = await submitPrediction(currentActivityId, "learner_ui_demo", pred);
+            lastSubmitData = rawResponse;
+
+            // Normalize response through M6 adapter
+            const model = normalizeSubmissionResponse(rawResponse);
+
+            // 1. Render Quantum Result
+            document.getElementById('quantumResultsCard').style.display = 'flex';
+            document.getElementById('targetStateVal').textContent = model.quantum.targetStateLabel;
+            document.getElementById('mostLikelyVal').textContent = model.quantum.mostLikelyStateLabel;
+            document.getElementById('targetProbVal').textContent = model.quantum.targetProbabilityStr;
+            document.getElementById('algorithmBadge').textContent = `${model.quantum.algorithm} (${model.quantum.shots} shots)`;
+
+            // Render Histogram
+            const hist = document.getElementById('histogramContainer');
+            hist.innerHTML = '';
+            model.quantum.probabilityBars.forEach(b => {
+                const row = document.createElement('div');
+                row.className = 'hist-row';
+                row.innerHTML = `
+                    <span class="hist-state">${b.stateLabel}</span>
+                    <div class="hist-bar-bg">
+                        <div class="hist-bar-fill ${b.isTarget ? 'target' : ''}" style="width: ${Math.max(b.percentageNum, 3)}%;"></div>
+                    </div>
+                    <span class="hist-pct">${b.percentageStr} (${b.count})</span>
+                `;
+                hist.appendChild(row);
+            });
+
+            // 2. Render ASCII Circuit if available
+            if (model.quantum.circuit.diagram) {
+                document.getElementById('asciiDiagramCard').style.display = 'flex';
+                document.getElementById('circuitDepthBadge').textContent = `Depth: ${model.quantum.circuit.depth}`;
+                document.getElementById('circuitAsciiDiagram').textContent = model.quantum.circuit.diagram;
+            }
+
+            // 3. Render M2 Adaptive Decision
+            document.getElementById('adaptiveDecisionCard').style.display = 'flex';
+            const outcomeBadge = document.getElementById('outcomeBadge');
+            outcomeBadge.textContent = model.learner.outcomeText;
+            outcomeBadge.className = `badge ${model.learner.outcomeClass}`;
+
+            document.getElementById('decisionActionBadge').textContent = model.adaptive.action;
+            document.getElementById('decisionReasonText').textContent = model.adaptive.reason;
+            document.getElementById('nextActivityText').textContent = `Next Target: ${model.adaptive.targetActivity || 'End of sequence'}`;
+
+            // 4. Reveal AI Guidance card
+            document.getElementById('aiGuidanceCard').style.display = 'flex';
+            document.getElementById('aiExplanationBox').textContent = 'Click "Explain My Result" for grounded AI guidance on this attempt.';
+
+        } catch (err) {
+            alert(`Error: ${err.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Run & Evaluate';
+        }
+    };
+
+    window.handleExplain = async function() {
+        if (!lastSubmitData) return;
+        const btn = document.getElementById('explainBtn');
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+
+        try {
+            const exp = await explainExperiment(lastSubmitData);
+            document.getElementById('aiExplanationBox').textContent = exp.explanation;
+        } catch (err) {
+            document.getElementById('aiExplanationBox').textContent = `AI Guidance Error: ${err.message}`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Explain My Result';
+        }
+    };
+
+    window.toggleTheme = function() {
+        const html = document.documentElement;
+        const isDark = html.getAttribute('data-theme') === 'dark';
+        html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        document.getElementById('themeToggleBtn').textContent = isDark ? '🌙 Dark Mode' : '☀️ Light Mode';
+    };
+
+    // Initialize
+    renderGrid();
+</script>
+
+</body>
+</html>

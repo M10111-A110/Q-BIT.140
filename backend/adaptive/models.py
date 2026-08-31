@@ -53,6 +53,17 @@ class QuizResult:
             "wrong_questions": self.wrong_questions,
         }
 
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> QuizResult:
+        return cls(
+            topic=str(d.get("topic", "")),
+            concept_id=resolve_concept_id(d.get("concept_id", "")),
+            score=float(d.get("score", 0.0)),
+            total_questions=int(d.get("total_questions", 0)),
+            correct_count=int(d.get("correct_count", 0)),
+            wrong_questions=list(d.get("wrong_questions", [])),
+        )
+
 
 @dataclass
 class AdaptiveRecommendation:
@@ -69,6 +80,15 @@ class AdaptiveRecommendation:
             "reason": self.reason,
             "concept_id": self.concept_id,
         }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> AdaptiveRecommendation:
+        return cls(
+            action=str(d.get("action", "reinforce_current_concept")),
+            target=d.get("target"),
+            reason=str(d.get("reason", "")),
+            concept_id=d.get("concept_id"),
+        )
 
 
 @dataclass
@@ -97,6 +117,19 @@ class LearnerState:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> LearnerState:
+        return cls(
+            user_id=str(d.get("user_id", "")),
+            concept_scores=dict(d.get("concept_scores", {})),
+            attempts=dict(d.get("attempts", {})),
+            errors=dict(d.get("errors", {})),
+            score_history=dict(d.get("score_history", {})),
+            last_updated=dict(d.get("last_updated", {})),
+            evidence_history=list(d.get("evidence_history", [])),
+            gap_inferences=dict(d.get("gap_inferences", {})),
+        )
 
 
 @dataclass
@@ -128,3 +161,19 @@ class LearnerContext:
             "current_concept": self.current_concept,
             "recommendation": rec_dict,
         }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> LearnerContext:
+        rec_raw = d.get("recommendation")
+        rec = AdaptiveRecommendation.from_dict(rec_raw) if rec_raw else None
+        return cls(
+            user_id=str(d.get("user_id", "")),
+            concept_mastery=dict(d.get("concept_mastery", {})),
+            concept_scores=dict(d.get("concept_scores", {})),
+            attempts=dict(d.get("attempts", {})),
+            errors=dict(d.get("errors", {})),
+            score_history=dict(d.get("score_history", {})),
+            gap_inferences=dict(d.get("gap_inferences", {})),
+            current_concept=d.get("current_concept"),
+            recommendation=rec,
+        )

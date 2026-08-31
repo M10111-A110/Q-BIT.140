@@ -38,6 +38,7 @@ from .repository import (
     JSONFileLearnerRepository,
     JSONStore,
     LearnerRepository,
+    SupabaseLearnerRepository,
 )
 
 __all__ = [
@@ -61,6 +62,7 @@ __all__ = [
     "Question",
     "QuizResult",
     "QuizSubmission",
+    "SupabaseLearnerRepository",
     "evaluate_conceptual_response",
     "evaluate_quantum_prediction",
     "get_activities_for_concept",

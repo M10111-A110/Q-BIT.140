@@ -5,7 +5,7 @@ import os
 from abc import ABC, abstractmethod
 from dataclasses import asdict
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from .models import LearnerState
 
@@ -70,7 +70,7 @@ class JSONFileLearnerRepository(LearnerRepository):
         if path.exists():
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
-            return LearnerState(**data)
+            return LearnerState.from_dict(data)
         return LearnerState(user_id=user_id)
 
     def load(self, user_id: str) -> LearnerState:
@@ -84,6 +84,75 @@ class JSONFileLearnerRepository(LearnerRepository):
 
     def exists(self, user_id: str) -> bool:
         return self._path(user_id).exists()
+
+
+class SupabaseLearnerRepository(LearnerRepository):
+    """
+    Supabase/PostgreSQL repository adapter.
+    Persists LearnerState domain models into the 'learner_states' table.
+    Uses supabase-py client when credentials are provided in the environment.
+    Falls back gracefully if client or table is unavailable.
+    """
+
+    def __init__(
+        self,
+        client: Any = None,
+        url: Optional[str] = None,
+        key: Optional[str] = None,
+        table_name: str = "learner_states",
+    ) -> None:
+        self.table_name = table_name
+        self.client = client
+        if self.client is None:
+            supabase_url = url or os.getenv("SUPABASE_URL")
+            supabase_key = key or os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            if supabase_url and supabase_key:
+                try:
+                    from supabase import create_client
+                    self.client = create_client(supabase_url, supabase_key)
+                except Exception:
+                    self.client = None
+
+    def get(self, user_id: str) -> LearnerState:
+        if self.client is not None:
+            try:
+                response = (
+                    self.client.table(self.table_name)
+                    .select("state_data")
+                    .eq("user_id", user_id)
+                    .execute()
+                )
+                if response.data and len(response.data) > 0:
+                    state_data = response.data[0].get("state_data", {})
+                    return LearnerState.from_dict(state_data)
+            except Exception:
+                pass
+        return LearnerState(user_id=user_id)
+
+    def save(self, state: LearnerState) -> None:
+        if self.client is not None:
+            try:
+                payload = {
+                    "user_id": state.user_id,
+                    "state_data": state.to_dict(),
+                }
+                self.client.table(self.table_name).upsert(payload).execute()
+            except Exception:
+                pass
+
+    def exists(self, user_id: str) -> bool:
+        if self.client is not None:
+            try:
+                response = (
+                    self.client.table(self.table_name)
+                    .select("user_id")
+                    .eq("user_id", user_id)
+                    .execute()
+                )
+                return bool(response.data and len(response.data) > 0)
+            except Exception:
+                pass
+        return False
 
 
 # Backward-compatible alias matching original M2 name
