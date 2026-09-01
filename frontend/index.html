@@ -41,12 +41,15 @@
     <button style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 14px;" onclick="closeErrorBanner()">✕</button>
 </div>
 
-<!-- CURRICULUM JOURNEY TRACK -->
+<!-- CURRICULUM JOURNEY TRACK (REQUIREMENT 5) -->
 <div class="journey-bar">
-    <span class="journey-title">Curriculum Path:</span>
-    <div class="journey-steps" id="journeySteps">
-        <!-- Dynamically rendered activity nodes -->
+    <div class="journey-left">
+        <span class="journey-title">Curriculum Path:</span>
+        <div class="journey-steps" id="journeySteps">
+            <!-- Dynamically rendered activity nodes -->
+        </div>
     </div>
+    <div class="journey-progress-badge" id="journeyProgressBadge">Step 1 of 4</div>
 </div>
 
 <!-- WORKSPACE LAYOUT -->
@@ -78,36 +81,95 @@
             </div>
 
             <div class="wire-grid" id="circuitWireGrid"></div>
+
+            <div class="gate-info-callout" id="gateInfoDisplay">
+                <span>💡 Click any tool gate to inspect its quantum operation or place it on the grid.</span>
+            </div>
         </div>
 
         <!-- M3 Verified Quantum Results (Revealed after submission) -->
         <div class="card" id="quantumResultsCard" style="display: none;">
             <div class="card-header">
                 <span class="card-title">M3 Verified Quantum Simulation Result</span>
-                <span class="badge" id="simAlgorithmBadge">Grover (1024 shots)</span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn secondary" style="padding: 3px 8px; font-size: 11px;" onclick="toggleComparePanel()">⚖️ Compare States</button>
+                    <span class="badge" id="simAlgorithmBadge">Grover (1024 shots)</span>
+                </div>
             </div>
 
-            <!-- STATE TRIAD WIDGET (PHASE 1) -->
+            <!-- STATE TRIAD WIDGET (REQUIREMENT 3A) -->
             <div class="state-triad-grid" id="stateTriadContainer">
-                <div class="triad-box prediction" id="triadPredictionBox">
+                <div class="triad-box prediction" id="triadPredictionBox" onclick="inspectStateFromTriad('prediction')">
                     <div class="triad-label">Learner Prediction</div>
                     <div class="triad-val pred" id="resPredictedState">|01⟩</div>
                     <div class="triad-sub" id="resPredictionStatus">Prediction Mismatch</div>
                 </div>
-                <div class="triad-box target">
+                <div class="triad-box target" id="triadTargetBox" onclick="inspectStateFromTriad('target')">
                     <div class="triad-label">Theoretical Target</div>
                     <div class="triad-val targ" id="resTargetState">|10⟩</div>
-                    <div class="triad-sub">Marked State</div>
+                    <div class="triad-sub">Marked Target State</div>
                 </div>
-                <div class="triad-box measured">
+                <div class="triad-box measured" id="triadMeasuredBox" onclick="inspectStateFromTriad('measured')">
                     <div class="triad-label">Empirical Measured</div>
                     <div class="triad-val meas" id="resMostLikely">|10⟩</div>
                     <div class="triad-sub" id="resTargetProb">93.8% (1024 shots)</div>
                 </div>
             </div>
 
-            <div style="font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px;">
-                Empirical Measurement Distribution (Qiskit Aer)
+            <!-- STATE ALIGNMENT COMPARISON PANEL (REQUIREMENT 9) -->
+            <div class="compare-panel" id="comparePanel" style="display: none;">
+                <div style="font-size: 11px; font-family: var(--font-mono); color: var(--cyan); text-transform: uppercase; font-weight: bold;">
+                    State Triad Alignment Overview
+                </div>
+                <div class="compare-flow">
+                    <div class="compare-node">
+                        <span class="lbl">Prediction</span>
+                        <span class="val" style="color: var(--yellow);" id="compPredVal">|01⟩</span>
+                    </div>
+                    <span class="compare-rel mismatch" id="compRel1">≠</span>
+                    <div class="compare-node">
+                        <span class="lbl">Theoretical Target</span>
+                        <span class="val" style="color: var(--green);" id="compTargVal">|10⟩</span>
+                    </div>
+                    <span class="compare-rel match" id="compRel2">=</span>
+                    <div class="compare-node">
+                        <span class="lbl">Measured Empirical</span>
+                        <span class="val" style="color: var(--cyan);" id="compMeasVal">|10⟩</span>
+                    </div>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); text-align: center;" id="compSummaryText">
+                    Learner prediction deviated from theoretical target, while Qiskit Aer empirical execution confirmed the target state.
+                </div>
+            </div>
+
+            <!-- STATE INSPECTOR DRAWER (REQUIREMENT 3C) -->
+            <div class="state-inspector-box" id="stateInspectorDrawer" style="display: none;">
+                <div class="inspector-row">
+                    <strong style="color: var(--cyan);">State Inspection: <span id="inspStateName">|10⟩</span></strong>
+                    <button style="background: none; border: none; color: var(--text-muted); cursor: pointer;" onclick="closeStateInspector()">✕</button>
+                </div>
+                <div class="inspector-row">
+                    <span>Measurement Count:</span>
+                    <span id="inspCountVal">961 / 1024 shots</span>
+                </div>
+                <div class="inspector-row">
+                    <span>Empirical Probability:</span>
+                    <span id="inspProbVal" style="color: var(--cyan);">93.8%</span>
+                </div>
+                <div class="inspector-row">
+                    <span>Theoretical Target Match:</span>
+                    <span id="inspTargetMatch" style="color: var(--green);">Yes (Marked State)</span>
+                </div>
+                <div class="inspector-row">
+                    <span>Learner Prediction Match:</span>
+                    <span id="inspPredMatch" style="color: var(--red);">No (Predicted |01⟩)</span>
+                </div>
+            </div>
+
+            <!-- MEASUREMENT HISTOGRAM (REQUIREMENT 3B) -->
+            <div style="font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
+                <span>Empirical Measurement Distribution (Qiskit Aer)</span>
+                <span style="font-size: 10px; color: var(--cyan);">Click any bar to inspect</span>
             </div>
             <div class="hist-container" id="histogramContainer"></div>
 
@@ -130,13 +192,25 @@
                 Loading task prompt...
             </div>
 
-            <!-- Quantum Prediction Input (for prediction tasks) -->
+            <!-- Quantum Prediction Input (for prediction tasks - Requirement 7) -->
             <div id="predictionInputSection" style="display: none; flex-direction: column; gap: 8px;">
-                <label style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">Predict Target Basis State:</label>
+                <label style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">Quick Select Basis State or Type:</label>
+                <div class="basis-pill-grid">
+                    <button class="basis-pill" onclick="selectBasisPill('00')">|00⟩</button>
+                    <button class="basis-pill" onclick="selectBasisPill('01')">|01⟩</button>
+                    <button class="basis-pill" onclick="selectBasisPill('10')">|10⟩</button>
+                    <button class="basis-pill" onclick="selectBasisPill('11')">|11⟩</button>
+                </div>
                 <div style="display: flex; gap: 8px;">
                     <input type="text" class="text-input" id="predictionField" value="01" placeholder="e.g. 01, 10" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-family: var(--font-mono); font-size: 13px; flex: 1;">
                     <button class="btn" id="submitPredictionBtn" onclick="handleSubmitPrediction()">Run & Evaluate</button>
                 </div>
+            </div>
+
+            <!-- Submission Progress Indicator (Requirement 7) -->
+            <div id="executionProgressBanner" class="execution-progress-bar" style="display: none;">
+                <span>⚡</span>
+                <span id="executionProgressText">Submitting prediction to M4 gateway...</span>
             </div>
 
             <!-- Conceptual Choice Options (for MCQ tasks) -->
@@ -171,7 +245,7 @@
             </div>
         </div>
 
-        <!-- 3. "WHY THIS NEXT?" ADAPTIVE DECISION CARD (PHASE 2 CAUSAL CHAIN) -->
+        <!-- 3. "WHY THIS NEXT?" ADAPTIVE DECISION TIMELINE (REQUIREMENT 4) -->
         <div class="card" id="adaptiveDecisionCard" style="display: none;">
             <div class="card-header">
                 <span class="card-title">Why This Next? (Adaptive Recommendation)</span>
@@ -180,36 +254,55 @@
 
             <div class="causal-chain">
                 <!-- 1. Trigger -->
-                <div class="chain-step">
-                    <div class="chain-node-title">1. Decision Trigger</div>
+                <div class="chain-step" onclick="toggleChainStep(this)">
+                    <div class="chain-node-header">
+                        <div class="chain-node-title"><span>1. Decision Trigger</span></div>
+                        <span class="chain-toggle-icon">▶</span>
+                    </div>
                     <div class="chain-node-val" id="decisionTriggerDisplay">Single Prediction Mismatch</div>
+                    <div class="chain-node-desc" id="triggerDesc">Triggered because the learner's initial prediction mismatched the target outcome.</div>
                 </div>
                 <div class="chain-arrow">↓</div>
 
                 <!-- 2. Evidence Sufficiency -->
-                <div class="chain-step">
-                    <div class="chain-node-title">2. Evidence Sufficiency</div>
+                <div class="chain-step" onclick="toggleChainStep(this)">
+                    <div class="chain-node-header">
+                        <div class="chain-node-title"><span>2. Evidence Sufficiency</span></div>
+                        <span class="chain-toggle-icon">▶</span>
+                    </div>
                     <div class="chain-node-val highlight-yellow" id="chainSufficiencyDisplay">Insufficient (Gathering Observations)</div>
+                    <div class="chain-node-desc" id="sufficiencyDesc">Single observations do not establish cognitive certainty; more evidence is required.</div>
                 </div>
                 <div class="chain-arrow">↓</div>
 
                 <!-- 3. Inferred Hypothesis -->
-                <div class="chain-step">
-                    <div class="chain-node-title">3. Inferred Learner-State Hypothesis</div>
+                <div class="chain-step" onclick="toggleChainStep(this)">
+                    <div class="chain-node-header">
+                        <div class="chain-node-title"><span>3. Inferred Learner-State Hypothesis</span></div>
+                        <span class="chain-toggle-icon">▶</span>
+                    </div>
                     <div class="chain-node-val highlight-cyan" id="chainHypothesisDisplay">Preliminary difficulty observation</div>
+                    <div class="chain-node-desc" id="hypothesisDesc">M2 cognitive model hypothesis representing estimated understanding.</div>
                 </div>
                 <div class="chain-arrow">↓</div>
 
                 <!-- 4. Supporting Evidence IDs -->
-                <div class="chain-step" id="supportingEvidenceSection">
-                    <div class="chain-node-title">4. Supporting Evidence Used</div>
+                <div class="chain-step" id="supportingEvidenceSection" onclick="toggleChainStep(this)">
+                    <div class="chain-node-header">
+                        <div class="chain-node-title"><span>4. Supporting Evidence Used</span></div>
+                        <span class="chain-toggle-icon">▶</span>
+                    </div>
                     <div id="supportingEvidenceList" class="supporting-chips"></div>
+                    <div class="chain-node-desc">Direct audit trail of historical attempt evidence cited by M2.</div>
                 </div>
                 <div class="chain-arrow">↓</div>
 
                 <!-- 5. Decision & Pedagogical Rationale -->
-                <div class="chain-step">
-                    <div class="chain-node-title">5. Pedagogical Action & Rationale</div>
+                <div class="chain-step expanded" onclick="toggleChainStep(this)">
+                    <div class="chain-node-header">
+                        <div class="chain-node-title"><span>5. Pedagogical Action & Rationale</span></div>
+                        <span class="chain-toggle-icon">▶</span>
+                    </div>
                     <p class="chain-reason" id="adaptiveReasonText">
                         Adaptive pedagogical rationale explaining why this action was selected.
                     </p>
@@ -231,11 +324,14 @@
             </div>
         </div>
 
-        <!-- 4. Grounded AI Guidance Card (M5) -->
+        <!-- 4. Grounded AI Guidance Card (M5 - Requirement 8) -->
         <div class="card" id="aiGuidanceCard" style="display: none;">
             <div class="card-header">
                 <span class="card-title">M5 Grounded AI Guidance</span>
                 <button class="btn secondary" style="padding: 4px 10px; font-size: 11px;" id="explainBtn" onclick="handleExplain()">Explain My Result</button>
+            </div>
+            <div style="font-size: 11px; font-family: var(--font-mono); color: var(--cyan); margin-bottom: 2px;">
+                💡 Boundary: M2 made the deterministic adaptive decision. M5 explains the physical mechanism.
             </div>
             <div class="explanation-box" id="aiExplanationText">Click "Explain My Result" to generate an authoritative explanation grounded in the quantum curriculum.</div>
         </div>
@@ -259,19 +355,26 @@
 <script type="module">
     import { fetchActivities, fetchActivity, submitPrediction, explainExperiment, askConceptualQuestion } from './js/api_client.js';
     import { normalizeSubmissionResponse, formatStateLabel, formatPercentage } from './js/adapter.js';
-    import { CircuitStudio } from './js/circuit_view.js';
+    import { CircuitStudio, GATE_DEFINITIONS } from './js/circuit_view.js';
 
     let activitiesList = [];
     let currentActivityId = "act_grover_2q_predict";
     let currentActivityData = null;
     let selectedOptionLetter = null;
     let lastSubmitResult = null;
+    let normalizedModel = null;
     let circuitStudio = null;
 
-    // Initialize Circuit Studio
+    // Initialize Circuit Studio with gate selection hook
     circuitStudio = new CircuitStudio("circuitWireGrid", {
         numQubits: 2,
         numColumns: 6,
+        onGateSelect: (gate) => {
+            if (gate && GATE_DEFINITIONS[gate.type]) {
+                const info = GATE_DEFINITIONS[gate.type];
+                document.getElementById("gateInfoDisplay").innerHTML = `<span><strong>${info.name} Gate:</strong> ${info.desc}</span>`;
+            }
+        }
     });
     circuitStudio.loadPreset("grover_2q");
 
@@ -291,11 +394,67 @@
     // Global Functions for Toolbar
     window.selectGate = function(type) {
         circuitStudio.setTool(type);
+        document.querySelectorAll(".gate-btn").forEach(b => b.classList.remove("active-tool"));
+        event.target.classList.add("active-tool");
         document.getElementById("activeToolDisplay").textContent = type;
+        if (GATE_DEFINITIONS[type]) {
+            const def = GATE_DEFINITIONS[type];
+            document.getElementById("gateInfoDisplay").innerHTML = `<span><strong>${def.name} (${type}):</strong> ${def.desc} • <code>${def.matrix}</code></span>`;
+        }
     };
     window.addStudioQubit = function() { circuitStudio.addQubit(); };
     window.clearStudioCircuit = function() { circuitStudio.clear(); };
     window.loadCircuitPreset = function(name) { circuitStudio.loadPreset(name); };
+
+    // Quick select basis pills
+    window.selectBasisPill = function(basis) {
+        document.querySelectorAll(".basis-pill").forEach(p => p.classList.remove("selected"));
+        event.target.classList.add("selected");
+        document.getElementById("predictionField").value = basis;
+    };
+
+    // Toggle Causal Chain Steps
+    window.toggleChainStep = function(stepElement) {
+        stepElement.classList.toggle("expanded");
+    };
+
+    // Toggle Compare States Panel
+    window.toggleComparePanel = function() {
+        const panel = document.getElementById("comparePanel");
+        panel.style.display = panel.style.display === "none" ? "flex" : "none";
+    };
+
+    // State Inspector
+    window.inspectState = function(stateObj) {
+        if (!stateObj || !normalizedModel) return;
+        const drawer = document.getElementById("stateInspectorDrawer");
+        drawer.style.display = "flex";
+        document.getElementById("inspStateName").textContent = stateObj.stateLabel;
+        document.getElementById("inspCountVal").textContent = `${stateObj.count} / ${normalizedModel.quantum.shots} shots`;
+        document.getElementById("inspProbVal").textContent = stateObj.percentageStr;
+        document.getElementById("inspTargetMatch").textContent = stateObj.isTarget ? "Yes (Marked Target State)" : "No";
+        document.getElementById("inspTargetMatch").style.color = stateObj.isTarget ? "var(--green)" : "var(--text-muted)";
+        document.getElementById("inspPredMatch").textContent = stateObj.isPredicted ? `Yes (Predicted ${stateObj.stateLabel})` : `No (Learner predicted ${normalizedModel.learner.predictionLabel})`;
+        document.getElementById("inspPredMatch").style.color = stateObj.isPredicted ? "var(--yellow)" : "var(--text-muted)";
+    };
+
+    window.inspectStateFromTriad = function(type) {
+        if (!normalizedModel || !normalizedModel.quantum) return;
+        if (type === "target") {
+            const bar = normalizedModel.quantum.probabilityBars.find(b => b.isTarget);
+            if (bar) inspectState(bar);
+        } else if (type === "measured") {
+            const bar = normalizedModel.quantum.probabilityBars.find(b => b.isMostLikely);
+            if (bar) inspectState(bar);
+        } else if (type === "prediction") {
+            const bar = normalizedModel.quantum.probabilityBars.find(b => b.isPredicted);
+            if (bar) inspectState(bar);
+        }
+    };
+
+    window.closeStateInspector = function() {
+        document.getElementById("stateInspectorDrawer").style.display = "none";
+    };
 
     window.closeErrorBanner = function() {
         document.getElementById("errorNotificationBanner").style.display = "none";
@@ -331,10 +490,15 @@
     function renderJourneyTrack() {
         const container = document.getElementById("journeySteps");
         container.innerHTML = "";
+        const curIdx = activitiesList.findIndex(a => a.activity_id === currentActivityId);
+        document.getElementById("journeyProgressBadge").textContent = `Step ${curIdx >= 0 ? curIdx + 1 : 1} of ${activitiesList.length || 4}`;
+
         activitiesList.forEach((act, idx) => {
             const node = document.createElement("div");
-            node.className = `journey-node ${act.activity_id === currentActivityId ? 'active' : ''}`;
-            node.textContent = `${idx + 1}. ${act.title.split(' ')[0]}`;
+            const isCur = act.activity_id === currentActivityId;
+            const isCompleted = idx < curIdx;
+            node.className = `journey-node ${isCur ? 'active' : ''} ${isCompleted ? 'completed' : ''}`;
+            node.innerHTML = `<span>${idx + 1}.</span> <span>${act.title.split(' ')[0]}</span>`;
             node.title = act.title;
             node.onclick = () => loadActivity(act.activity_id);
             container.appendChild(node);
@@ -355,11 +519,14 @@
 
         // Reset outcome displays
         document.getElementById("quantumResultsCard").style.display = "none";
+        document.getElementById("comparePanel").style.display = "none";
+        document.getElementById("stateInspectorDrawer").style.display = "none";
         document.getElementById("evidenceOutcomeCard").style.display = "none";
         document.getElementById("adaptiveDecisionCard").style.display = "none";
         document.getElementById("aiGuidanceCard").style.display = "none";
         selectedOptionLetter = null;
         lastSubmitResult = null;
+        normalizedModel = null;
 
         try {
             const act = await fetchActivity(activityId);
@@ -421,15 +588,21 @@
         const learnerId = document.getElementById("learnerIdInput").value.trim() || "demo_learner";
         const submitBtn = document.getElementById("submitPredictionBtn");
         const choiceBtn = document.getElementById("submitChoiceBtn");
+        const progressBanner = document.getElementById("executionProgressBanner");
+        const progressText = document.getElementById("executionProgressText");
+
         submitBtn.disabled = true; choiceBtn.disabled = true;
+        progressBanner.style.display = "flex";
+        progressText.textContent = "Executing quantum circuit on Qiskit Aer (1024 shots)...";
         closeErrorBanner();
 
         try {
             const rawResponse = await submitPrediction(currentActivityId, learnerId, learnerResponse);
             lastSubmitResult = rawResponse;
-            const model = normalizeSubmissionResponse(rawResponse);
+            normalizedModel = normalizeSubmissionResponse(rawResponse);
+            const model = normalizedModel;
 
-            // 1. Render Quantum Simulation Result & State Triad (Phase 1)
+            // 1. Render Quantum Simulation Result & State Triad (Requirement 3)
             if (model.quantum) {
                 document.getElementById("quantumResultsCard").style.display = "flex";
 
@@ -443,18 +616,31 @@
                 document.getElementById("resTargetProb").textContent = `${model.quantum.targetProbabilityStr} (${model.quantum.shots} shots)`;
                 document.getElementById("simAlgorithmBadge").textContent = `${model.quantum.algorithm} (${model.quantum.shots} shots)`;
 
-                // Populate Measurement Histogram
+                // Populate State Compare Diagram
+                document.getElementById("compPredVal").textContent = model.learner.predictionLabel;
+                document.getElementById("compTargVal").textContent = model.quantum.targetStateLabel;
+                document.getElementById("compMeasVal").textContent = `${model.quantum.mostLikelyStateLabel} (${model.quantum.targetProbabilityStr})`;
+                document.getElementById("compRel1").textContent = model.learner.isCorrect ? "=" : "≠";
+                document.getElementById("compRel1").className = `compare-rel ${model.learner.isCorrect ? 'match' : 'mismatch'}`;
+
+                // Populate Interactive Measurement Histogram
                 const hist = document.getElementById("histogramContainer");
                 hist.innerHTML = "";
                 model.quantum.probabilityBars.forEach(b => {
                     const row = document.createElement("div");
-                    row.className = "hist-row";
+                    row.className = `hist-row ${b.isTarget ? 'target-row' : ''}`;
+                    row.title = `State ${b.stateLabel}: ${b.percentageStr} (${b.count} shots). Click to inspect details.`;
+                    row.onclick = () => {
+                        document.querySelectorAll(".hist-row").forEach(r => r.classList.remove("selected"));
+                        row.classList.add("selected");
+                        inspectState(b);
+                    };
                     row.innerHTML = `
                         <span class="hist-state">${b.stateLabel}</span>
                         <div class="hist-bar-bg">
-                            <div class="hist-bar-fill ${b.isTarget ? 'target' : ''}" style="width: ${Math.max(b.percentageNum, 3)}%;"></div>
+                            <div class="hist-bar-fill ${b.isTarget ? 'target' : ''} ${b.isPredicted ? 'predicted' : ''}" style="width: ${Math.max(b.percentageNum, 3)}%;"></div>
                         </div>
-                        <span class="hist-pct">${b.percentageStr} (${b.count})</span>
+                        <span class="hist-pct">${b.percentageStr}</span>
                     `;
                     hist.appendChild(row);
                 });
@@ -479,7 +665,7 @@
             document.getElementById("inferredHypothesisDisplay").textContent = model.adaptive.hypothesisLabel;
             document.getElementById("evidenceIdDisplay").textContent = model.learner.evidenceId || "N/A";
 
-            // 3. Render "Why This Next?" Adaptive Decision Card (Phase 2 Causal Chain)
+            // 3. Render "Why This Next?" Adaptive Decision Card (Requirement 4)
             document.getElementById("adaptiveDecisionCard").style.display = "flex";
             document.getElementById("adaptiveActionBadge").textContent = model.adaptive.actionLabel;
             document.getElementById("decisionTriggerDisplay").textContent = model.adaptive.triggerLabel;
@@ -494,7 +680,7 @@
                 model.adaptive.supportingEvidenceIds.forEach((eid, idx) => {
                     const chip = document.createElement("span");
                     chip.className = "evidence-chip";
-                    chip.textContent = `Attempt #${idx + 1} Record: ${eid}`;
+                    chip.innerHTML = `<span>Attempt #${idx + 1} Record</span> <strong>${eid}</strong>`;
                     suppList.appendChild(chip);
                 });
                 document.getElementById("supportingEvidenceSection").style.display = "block";
@@ -528,6 +714,7 @@
             showError(`Submission Error: ${err.message}`);
         } finally {
             submitBtn.disabled = false; choiceBtn.disabled = false;
+            progressBanner.style.display = "none";
         }
     }
 
@@ -539,7 +726,7 @@
     window.handleExplain = async function() {
         if (!lastSubmitResult) return;
         const btn = document.getElementById("explainBtn");
-        btn.disabled = true; btn.textContent = "Generating...";
+        btn.disabled = true; btn.textContent = "Generating Grounded Guidance...";
 
         try {
             const exp = await explainExperiment(lastSubmitResult);

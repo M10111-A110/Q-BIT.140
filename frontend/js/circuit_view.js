@@ -1,8 +1,19 @@
 /**
  * Q-BIT.140 — M6 Interactive Circuit Canvas Studio
- * Handles interactive wire grid rendering, gate placement, and presets.
+ * Handles interactive wire grid rendering, gate placement, presets, and tooltips.
  * Does NOT execute quantum simulation (M3 on backend is authoritative).
  */
+
+export const GATE_DEFINITIONS = {
+    "H": { name: "Hadamard", matrix: "1/√2 [[1, 1], [1, -1]]", desc: "Creates equal superposition: H|0⟩ = (|0⟩+|1⟩)/√2" },
+    "X": { name: "Pauli-X (NOT)", matrix: "[[0, 1], [1, 0]]", desc: "Bit-flip gate: X|0⟩ = |1⟩, X|1⟩ = |0⟩" },
+    "Y": { name: "Pauli-Y", matrix: "[[0, -i], [i, 0]]", desc: "Bit and phase flip gate" },
+    "Z": { name: "Pauli-Z (Phase)", matrix: "[[1, 0], [0, -1]]", desc: "Phase-flip gate: Z|1⟩ = -|1⟩" },
+    "S": { name: "S (Phase √Z)", matrix: "[[1, 0], [0, i]]", desc: "π/2 phase gate: S|1⟩ = i|1⟩" },
+    "T": { name: "T (π/4 Phase)", matrix: "[[1, 0], [0, e^(iπ/4)]]", desc: "π/4 phase gate: T = √S" },
+    "CZ": { name: "Controlled-Z", matrix: "diag(1, 1, 1, -1)", desc: "Flips phase of |11⟩ target: CZ|11⟩ = -|11⟩" },
+    "M": { name: "Measurement", matrix: "Projective", desc: "Collapses qubit state to computational basis |0⟩ or |1⟩" },
+};
 
 export class CircuitStudio {
     constructor(containerId, options = {}) {
@@ -12,6 +23,7 @@ export class CircuitStudio {
         this.gates = options.gates || [];
         this.selectedTool = null;
         this.onCircuitChange = options.onCircuitChange || null;
+        this.onGateSelect = options.onGateSelect || null;
     }
 
     setTool(tool) {
@@ -101,8 +113,9 @@ export class CircuitStudio {
                 const gate = this.gates.find(g => g.qubit === q && g.column === c);
                 if (gate) {
                     const gateEl = document.createElement("div");
-                    gateEl.className = "placed-gate";
+                    gateEl.className = `placed-gate ${gate.type === 'CZ' ? 'cz-gate' : ''} ${gate.type === 'M' ? 'm-gate' : ''}`;
                     gateEl.textContent = gate.type;
+                    gateEl.title = `${gate.type} Gate - Click to remove`;
                     slot.appendChild(gateEl);
                 }
 
@@ -118,14 +131,17 @@ export class CircuitStudio {
     handleSlotClick(q, c) {
         const idx = this.gates.findIndex(g => g.qubit === q && g.column === c);
         if (idx >= 0) {
-            this.gates.splice(idx, 1);
+            const removed = this.gates.splice(idx, 1)[0];
+            if (this.onGateSelect) this.onGateSelect(null);
         } else if (this.selectedTool) {
-            this.gates.push({
+            const newGate = {
                 id: Date.now(),
                 type: this.selectedTool,
                 qubit: q,
                 column: c,
-            });
+            };
+            this.gates.push(newGate);
+            if (this.onGateSelect) this.onGateSelect(newGate);
         }
         this.render();
         if (this.onCircuitChange) this.onCircuitChange(this.gates);
