@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Optional
 
@@ -11,6 +12,8 @@ from backend.adaptive import (
 )
 from backend.ai import LLMProvider, MockLLMProvider, get_default_provider
 
+logger = logging.getLogger(__name__)
+
 
 def _create_default_repository() -> LearnerRepository:
     """Factory creating Supabase repository if credentials exist, else in-memory store."""
@@ -19,7 +22,8 @@ def _create_default_repository() -> LearnerRepository:
     if supabase_url and supabase_key:
         try:
             return SupabaseLearnerRepository(url=supabase_url, key=supabase_key)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to initialize SupabaseLearnerRepository; falling back to InMemoryLearnerRepository: %s", exc)
             return InMemoryLearnerRepository()
     return InMemoryLearnerRepository()
 

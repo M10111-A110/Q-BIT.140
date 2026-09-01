@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 from abc import ABC, abstractmethod
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class LLMProvider(ABC):
@@ -133,6 +136,7 @@ def get_default_provider() -> LLMProvider:
     if os.getenv("GROQ_API_KEY"):
         try:
             return GroqLLMProvider()
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to initialize GroqLLMProvider; falling back to MockLLMProvider: %s", exc)
             return MockLLMProvider()
     return MockLLMProvider()
