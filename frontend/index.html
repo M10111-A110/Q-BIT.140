@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q-BIT.140 — AI-Based Interactive Quantum Algorithm Learning Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header>
+    <div class="header-left">
+        <div>
+            <h1 class="brand-title">Q-BIT.140</h1>
+            <div class="brand-sub">Interactive Quantum Learning Platform • SIH 2026</div>
+        </div>
+    </div>
+    <div class="header-right">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">Learner ID:</span>
+            <input type="text" id="learnerIdInput" value="demo_learner" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; width: 120px;">
+        </div>
+        <button class="btn secondary" onclick="openAskModal()">🤖 Ask AI</button>
+        <button class="btn secondary" id="themeToggleBtn" onclick="toggleTheme()">☀️ Light Mode</button>
+    </div>
+</header>
+
+<!-- GLOBAL NOTIFICATION / ERROR BANNER -->
+<div id="errorNotificationBanner" style="display: none; padding: 10px 28px; font-size: 12px; font-family: var(--font-mono); background: rgba(239, 68, 68, 0.15); border-bottom: 1px solid var(--red); color: var(--red); align-items: center; justify-content: space-between;">
+    <span id="errorBannerMessage">Error message</span>
+    <button style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 14px;" onclick="closeErrorBanner()">✕</button>
+</div>
+
+<!-- CURRICULUM JOURNEY TRACK -->
+<div class="journey-bar">
+    <span class="journey-title">Curriculum Path:</span>
+    <div class="journey-steps" id="journeySteps">
+        <!-- Dynamically rendered activity nodes -->
+    </div>
+</div>
+
+<!-- WORKSPACE LAYOUT -->
+<div class="workspace-layout">
+    <!-- LEFT PANE: Circuit Studio & M3 Simulation (M6) -->
+    <div class="pane pane-left">
+        <!-- Circuit Studio -->
+        <div class="circuit-studio">
+            <div class="card-header">
+                <span class="card-title">Interactive Quantum Circuit Studio</span>
+                <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">
+                    Tool: <strong id="activeToolDisplay" style="color: var(--cyan);">None</strong>
+                </span>
+            </div>
+
+            <div class="gate-toolbar">
+                <button class="gate-btn" onclick="selectGate('H')">H</button>
+                <button class="gate-btn" onclick="selectGate('X')">X</button>
+                <button class="gate-btn" onclick="selectGate('Y')">Y</button>
+                <button class="gate-btn" onclick="selectGate('Z')">Z</button>
+                <button class="gate-btn" onclick="selectGate('S')">S</button>
+                <button class="gate-btn" onclick="selectGate('T')">T</button>
+                <button class="gate-btn" onclick="selectGate('CZ')">CZ</button>
+                <button class="gate-btn" onclick="selectGate('M')">M</button>
+                <div style="flex: 1;"></div>
+                <button class="btn secondary" style="padding: 5px 10px; font-size: 11px;" onclick="loadCircuitPreset('grover_2q')">Preset: Grover 2Q</button>
+                <button class="btn secondary" style="padding: 5px 10px; font-size: 11px;" onclick="addStudioQubit()">+ Qubit</button>
+                <button class="btn secondary" style="padding: 5px 10px; font-size: 11px;" onclick="clearStudioCircuit()">Clear</button>
+            </div>
+
+            <div class="wire-grid" id="circuitWireGrid"></div>
+        </div>
+
+        <!-- M3 Verified Quantum Results (Revealed after submission) -->
+        <div class="card" id="quantumResultsCard" style="display: none;">
+            <div class="card-header">
+                <span class="card-title">M3 Verified Quantum Simulation Result</span>
+                <span class="badge" id="simAlgorithmBadge">Grover (1024 shots)</span>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Target State</div>
+                    <div class="stat-val" style="color: var(--green);" id="resTargetState">|10⟩</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Most Likely</div>
+                    <div class="stat-val" id="resMostLikely">|10⟩</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Target Prob</div>
+                    <div class="stat-val" style="color: var(--cyan);" id="resTargetProb">100.0%</div>
+                </div>
+            </div>
+
+            <div style="font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px;">
+                Empirical Measurement Distribution (Qiskit Aer)
+            </div>
+            <div class="hist-container" id="histogramContainer"></div>
+
+            <div id="asciiCircuitContainer" style="display: none; margin-top: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Verified Circuit Diagram (ASCII):</div>
+                <pre id="asciiCircuitDiagram" style="background: var(--bg); padding: 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 10px; overflow-x: auto; color: var(--cyan);"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANE: Task Prompt, Learner Submission & M2 Adaptive Cognition (M1) -->
+    <div class="pane pane-right">
+        <!-- 1. Active Task Card -->
+        <div class="card" id="activityCard">
+            <div class="card-header">
+                <span class="card-title" id="activityTitle">Loading Activity...</span>
+                <span class="badge" id="activityConceptBadge">quantum</span>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;" id="activityPrompt">
+                Loading task prompt...
+            </p>
+
+            <!-- Quantum Prediction Input (for prediction tasks) -->
+            <div id="predictionInputSection" style="display: none; flex-direction: column; gap: 8px;">
+                <label style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">Predict Target Basis State:</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" class="text-input" id="predictionField" value="01" placeholder="e.g. 01, 10" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-family: var(--font-mono); font-size: 13px; flex: 1;">
+                    <button class="btn" id="submitPredictionBtn" onclick="handleSubmitPrediction()">Run & Evaluate</button>
+                </div>
+            </div>
+
+            <!-- Conceptual Choice Options (for MCQ tasks) -->
+            <div id="choiceInputSection" style="display: none; flex-direction: column; gap: 10px;">
+                <div class="options-grid" id="optionsContainer"></div>
+                <button class="btn" id="submitChoiceBtn" onclick="handleSubmitChoice()">Submit Answer</button>
+            </div>
+        </div>
+
+        <!-- 2. Empirical Outcome & Evidence Card -->
+        <div class="card" id="evidenceOutcomeCard" style="display: none;">
+            <div class="card-header">
+                <span class="card-title">Empirical Evidence & Cognition</span>
+                <span class="badge" id="outcomeBadge">Prediction Outcome</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <span style="font-size: 12px; color: var(--text-muted);">Trajectory Trend:</span>
+                <span class="badge trend" id="trajectoryTrendBadge">observing</span>
+                <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">Confidence:</span>
+                <span class="badge" id="confidenceBadge">0.35</span>
+            </div>
+        </div>
+
+        <!-- 3. M2 Adaptive Decision Card -->
+        <div class="card" id="adaptiveDecisionCard" style="display: none;">
+            <div class="card-header">
+                <span class="card-title">M2 Adaptive Recommendation</span>
+                <span class="badge action" id="adaptiveActionBadge">gather_evidence</span>
+            </div>
+            <p style="font-size: 13px; line-height: 1.4; color: var(--text);" id="adaptiveReasonText">
+                Adaptive decision explanation.
+            </p>
+            <div id="prereqGapCallout" style="display: none; font-size: 12px; color: var(--yellow); background: rgba(245, 158, 11, 0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                ⚠️ Prerequisite Gap Identified in Concept: <strong id="prereqGapName">Superposition</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                <span style="font-family: var(--font-mono); font-size: 11px; color: var(--cyan);" id="nextTargetActivityId">Next: act_grover_2q_predict</span>
+                <button class="btn" id="continueNextBtn" onclick="handleContinueToTarget()">Continue →</button>
+            </div>
+        </div>
+
+        <!-- 4. Grounded AI Guidance Card (M5) -->
+        <div class="card" id="aiGuidanceCard" style="display: none;">
+            <div class="card-header">
+                <span class="card-title">M5 Grounded AI Guidance</span>
+                <button class="btn secondary" style="padding: 4px 10px; font-size: 11px;" id="explainBtn" onclick="handleExplain()">Explain My Result</button>
+            </div>
+            <div class="explanation-box" id="aiExplanationText">Click "Explain My Result" to generate an authoritative explanation grounded in the quantum curriculum.</div>
+        </div>
+    </div>
+</div>
+
+<!-- AI CONCEPTUAL ASK MODAL -->
+<div class="modal-overlay" id="askModal" style="display: none;">
+    <div class="modal-card">
+        <div class="card-header">
+            <span class="card-title">🤖 Ask Quantum AI Assistant</span>
+            <button class="btn secondary" style="padding: 2px 8px; font-size: 11px;" onclick="closeAskModal()">✕</button>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted);">Ask any conceptual question about qubits, states, superposition, quantum gates, or Grover's algorithm:</p>
+        <textarea id="askQuestionInput" rows="3" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 10px; border-radius: 8px; font-family: var(--font-body); font-size: 13px; resize: vertical;" placeholder="e.g. Why does Grover amplitude amplification over-rotate?"></textarea>
+        <button class="btn" id="askSubmitBtn" onclick="handleAskQuestion()">Inquire</button>
+        <div class="explanation-box" id="askAnswerBox" style="display: none; max-height: 180px;"></div>
+    </div>
+</div>
+
+<script type="module">
+    import { fetchActivities, fetchActivity, submitPrediction, explainExperiment, askConceptualQuestion } from './js/api_client.js';
+    import { normalizeSubmissionResponse, formatStateLabel, formatPercentage } from './js/adapter.js';
+    import { CircuitStudio } from './js/circuit_view.js';
+
+    let activitiesList = [];
+    let currentActivityId = "act_grover_2q_predict";
+    let currentActivityData = null;
+    let selectedOptionLetter = null;
+    let lastSubmitResult = null;
+    let circuitStudio = null;
+
+    // Initialize Circuit Studio
+    circuitStudio = new CircuitStudio("circuitWireGrid", {
+        numQubits: 2,
+        numColumns: 6,
+    });
+    circuitStudio.loadPreset("grover_2q");
+
+    // Global Functions for Toolbar
+    window.selectGate = function(type) {
+        circuitStudio.setTool(type);
+        document.getElementById("activeToolDisplay").textContent = type;
+    };
+    window.addStudioQubit = function() { circuitStudio.addQubit(); };
+    window.clearStudioCircuit = function() { circuitStudio.clear(); };
+    window.loadCircuitPreset = function(name) { circuitStudio.loadPreset(name); };
+
+    window.closeErrorBanner = function() {
+        document.getElementById("errorNotificationBanner").style.display = "none";
+    };
+
+    function showError(message) {
+        const banner = document.getElementById("errorNotificationBanner");
+        document.getElementById("errorBannerMessage").textContent = message;
+        banner.style.display = "flex";
+    }
+
+    // App Initialization
+    async function initApp() {
+        try {
+            activitiesList = await fetchActivities();
+            renderJourneyTrack();
+            await loadActivity(currentActivityId);
+        } catch (err) {
+            console.error("Failed to load initial activities:", err);
+            showError(`Failed to load activities: ${err.message}`);
+            // Fallback rendering
+            document.getElementById("activityTitle").textContent = "Grover 2-Qubit Prediction";
+            document.getElementById("predictionInputSection").style.display = "flex";
+        }
+    }
+
+    function renderJourneyTrack() {
+        const container = document.getElementById("journeySteps");
+        container.innerHTML = "";
+        activitiesList.forEach((act, idx) => {
+            const node = document.createElement("div");
+            node.className = `journey-node ${act.activity_id === currentActivityId ? 'active' : ''}`;
+            node.textContent = `${idx + 1}. ${act.title.split(' ')[0]}`;
+            node.title = act.title;
+            node.onclick = () => loadActivity(act.activity_id);
+            container.appendChild(node);
+
+            if (idx < activitiesList.length - 1) {
+                const arr = document.createElement("span");
+                arr.className = "journey-arrow";
+                arr.textContent = "→";
+                container.appendChild(arr);
+            }
+        });
+    }
+
+    window.loadActivity = async function(activityId) {
+        currentActivityId = activityId;
+        renderJourneyTrack();
+        closeErrorBanner();
+
+        // Reset outcome displays
+        document.getElementById("quantumResultsCard").style.display = "none";
+        document.getElementById("evidenceOutcomeCard").style.display = "none";
+        document.getElementById("adaptiveDecisionCard").style.display = "none";
+        document.getElementById("aiGuidanceCard").style.display = "none";
+        selectedOptionLetter = null;
+        lastSubmitResult = null;
+
+        try {
+            const act = await fetchActivity(activityId);
+            currentActivityData = act;
+
+            document.getElementById("activityTitle").textContent = act.title;
+            document.getElementById("activityConceptBadge").textContent = act.concept_id;
+            document.getElementById("activityPrompt").textContent = act.prompt;
+
+            if (act.task_type === "quantum_prediction") {
+                document.getElementById("predictionInputSection").style.display = "flex";
+                document.getElementById("choiceInputSection").style.display = "none";
+                if (act.quantum_experiment) {
+                    circuitStudio.loadPreset("grover_2q");
+                }
+            } else {
+                document.getElementById("predictionInputSection").style.display = "none";
+                document.getElementById("choiceInputSection").style.display = "flex";
+                renderOptions(act.options || {});
+            }
+        } catch (err) {
+            showError(`Error loading activity: ${err.message}`);
+        }
+    };
+
+    function renderOptions(options) {
+        const container = document.getElementById("optionsContainer");
+        container.innerHTML = "";
+        selectedOptionLetter = null;
+
+        Object.entries(options).forEach(([letter, text]) => {
+            const btn = document.createElement("div");
+            btn.className = "option-btn";
+            btn.innerHTML = `<span class="option-key">${letter}.</span> <span>${text}</span>`;
+            btn.onclick = () => {
+                document.querySelectorAll(".option-btn").forEach(b => b.classList.remove("selected"));
+                btn.classList.add("selected");
+                selectedOptionLetter = letter;
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    window.handleSubmitPrediction = async function() {
+        const pred = document.getElementById("predictionField").value.trim();
+        if (!pred) return alert("Please enter a prediction basis state (e.g. 01 or 10)");
+        await executeSubmission(pred);
+    };
+
+    window.handleSubmitChoice = async function() {
+        if (!selectedOptionLetter) return alert("Please select an option letter (A, B, C, or D)");
+        await executeSubmission(selectedOptionLetter);
+    };
+
+    async function executeSubmission(learnerResponse) {
+        const learnerId = document.getElementById("learnerIdInput").value.trim() || "demo_learner";
+        const submitBtn = document.getElementById("submitPredictionBtn");
+        const choiceBtn = document.getElementById("submitChoiceBtn");
+        submitBtn.disabled = true; choiceBtn.disabled = true;
+        closeErrorBanner();
+
+        try {
+            const rawResponse = await submitPrediction(currentActivityId, learnerId, learnerResponse);
+            lastSubmitResult = rawResponse;
+            const model = normalizeSubmissionResponse(rawResponse);
+
+            // 1. Render Quantum Simulation Result (if present)
+            if (model.quantum) {
+                document.getElementById("quantumResultsCard").style.display = "flex";
+                document.getElementById("resTargetState").textContent = model.quantum.targetStateLabel;
+                document.getElementById("resMostLikely").textContent = model.quantum.mostLikelyStateLabel;
+                document.getElementById("resTargetProb").textContent = model.quantum.targetProbabilityStr;
+                document.getElementById("simAlgorithmBadge").textContent = `${model.quantum.algorithm} (${model.quantum.shots} shots)`;
+
+                const hist = document.getElementById("histogramContainer");
+                hist.innerHTML = "";
+                model.quantum.probabilityBars.forEach(b => {
+                    const row = document.createElement("div");
+                    row.className = "hist-row";
+                    row.innerHTML = `
+                        <span class="hist-state">${b.stateLabel}</span>
+                        <div class="hist-bar-bg">
+                            <div class="hist-bar-fill ${b.isTarget ? 'target' : ''}" style="width: ${Math.max(b.percentageNum, 3)}%;"></div>
+                        </div>
+                        <span class="hist-pct">${b.percentageStr} (${b.count})</span>
+                    `;
+                    hist.appendChild(row);
+                });
+
+                if (model.quantum.circuit.diagram) {
+                    document.getElementById("asciiCircuitContainer").style.display = "block";
+                    document.getElementById("asciiCircuitDiagram").textContent = model.quantum.circuit.diagram;
+                }
+            } else {
+                document.getElementById("quantumResultsCard").style.display = "none";
+            }
+
+            // 2. Render Evidence & Trajectory
+            document.getElementById("evidenceOutcomeCard").style.display = "flex";
+            const outcomeBadge = document.getElementById("outcomeBadge");
+            outcomeBadge.textContent = `${model.learner.outcomeText} (Attempt #${model.learner.attemptNumber})`;
+            outcomeBadge.className = `badge ${model.learner.outcomeClass}`;
+
+            document.getElementById("trajectoryTrendBadge").textContent = model.adaptive.gapTrend;
+            document.getElementById("confidenceBadge").textContent = model.adaptive.gapConfidence.toFixed(2);
+
+            // 3. Render M2 Adaptive Decision Card
+            document.getElementById("adaptiveDecisionCard").style.display = "flex";
+            document.getElementById("adaptiveActionBadge").textContent = model.adaptive.action;
+            document.getElementById("adaptiveReasonText").textContent = model.adaptive.reason;
+
+            if (model.adaptive.prerequisiteGap) {
+                document.getElementById("prereqGapCallout").style.display = "block";
+                document.getElementById("prereqGapName").textContent = model.adaptive.prerequisiteGap;
+            } else {
+                document.getElementById("prereqGapCallout").style.display = "none";
+            }
+
+            const targetAct = model.adaptive.targetActivity;
+            if (targetAct) {
+                document.getElementById("nextTargetActivityId").textContent = `Next Activity: ${targetAct}`;
+                document.getElementById("continueNextBtn").style.display = "inline-block";
+                document.getElementById("continueNextBtn").dataset.target = targetAct;
+            } else {
+                document.getElementById("nextTargetActivityId").textContent = "End of Sequence";
+                document.getElementById("continueNextBtn").style.display = "none";
+            }
+
+            // 4. Reveal AI Guidance Card
+            document.getElementById("aiGuidanceCard").style.display = "flex";
+            document.getElementById("aiExplanationText").textContent = 'Click "Explain My Result" for grounded AI explanation of this attempt.';
+
+        } catch (err) {
+            showError(`Submission Error: ${err.message}`);
+        } finally {
+            submitBtn.disabled = false; choiceBtn.disabled = false;
+        }
+    }
+
+    window.handleContinueToTarget = function() {
+        const target = document.getElementById("continueNextBtn").dataset.target;
+        if (target) loadActivity(target);
+    };
+
+    window.handleExplain = async function() {
+        if (!lastSubmitResult) return;
+        const btn = document.getElementById("explainBtn");
+        btn.disabled = true; btn.textContent = "Generating...";
+
+        try {
+            const exp = await explainExperiment(lastSubmitResult);
+            document.getElementById("aiExplanationText").textContent = exp.explanation;
+        } catch (err) {
+            // Graceful degradation: do NOT erase or fail the underlying submission
+            document.getElementById("aiExplanationText").textContent = `AI Guidance Notice: Grounded explanation is temporarily unavailable (${err.message}). Your verified quantum simulation result and adaptive progress remain safely recorded.`;
+        } finally {
+            btn.disabled = false; btn.textContent = "Explain My Result";
+        }
+    };
+
+    // Modal AI Question Inquirer
+    window.openAskModal = function() {
+        document.getElementById("askModal").style.display = "flex";
+        document.getElementById("askAnswerBox").style.display = "none";
+    };
+    window.closeAskModal = function() {
+        document.getElementById("askModal").style.display = "none";
+    };
+    window.handleAskQuestion = async function() {
+        const q = document.getElementById("askQuestionInput").value.trim();
+        if (!q) return;
+        const btn = document.getElementById("askSubmitBtn");
+        btn.disabled = true; btn.textContent = "Consulting Curriculum...";
+
+        try {
+            const res = await askConceptualQuestion(q, currentActivityData?.concept_id || null);
+            const box = document.getElementById("askAnswerBox");
+            box.style.display = "block";
+            box.textContent = res.answer;
+        } catch (err) {
+            showError(`Question error: ${err.message}`);
+        } finally {
+            btn.disabled = false; btn.textContent = "Inquire";
+        }
+    };
+
+    window.toggleTheme = function() {
+        const html = document.documentElement;
+        const isDark = html.getAttribute("data-theme") === "dark";
+        html.setAttribute("data-theme", isDark ? "light" : "dark");
+        document.getElementById("themeToggleBtn").textContent = isDark ? "🌙 Dark Mode" : "☀️ Light Mode";
+    };
+
+    // Boot
+    initApp();
+</script>
+
+</body>
+</html>
