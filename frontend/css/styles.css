@@ -85,7 +85,7 @@ header {
 }
 .brand-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
 
-.header-right { display: flex; align-items: center; gap: 12px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
 
 /* JOURNEY TRACK */
 .journey-bar {
@@ -188,7 +188,118 @@ header {
 .badge.action { color: var(--yellow); border-color: var(--yellow); }
 .badge.trend { color: var(--purple); border-color: var(--purple); }
 
-/* CIRCUIT CANVAS & TOOLBOX */
+/* STATE TRIAD WIDGET (PHASE 1) */
+.state-triad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 4px 0;
+}
+.triad-box {
+    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+}
+.triad-box.prediction { border-color: rgba(239, 68, 68, 0.4); }
+.triad-box.prediction.correct { border-color: rgba(16, 185, 129, 0.4); }
+.triad-box.target { border-color: rgba(16, 185, 129, 0.4); }
+.triad-box.measured { border-color: rgba(34, 211, 238, 0.4); }
+.triad-label {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.triad-val {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 700;
+}
+.triad-val.pred { color: var(--yellow); }
+.triad-val.targ { color: var(--green); }
+.triad-val.meas { color: var(--cyan); }
+.triad-sub {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+}
+
+/* CAUSAL CHAIN / WHY THIS NEXT? (PHASE 2) */
+.causal-chain {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.chain-step {
+    background: var(--bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.chain-node-title {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+.chain-node-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 600;
+}
+.chain-node-val.highlight-yellow { color: var(--yellow); }
+.chain-node-val.highlight-cyan { color: var(--cyan); }
+.chain-arrow {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1;
+    font-weight: bold;
+}
+.supporting-chips {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 4px;
+}
+.evidence-chip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--yellow);
+    background: rgba(245, 158, 11, 0.08);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.chain-reason {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--text);
+    margin-top: 2px;
+}
+.next-step {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-color: rgba(34, 211, 238, 0.3);
+    background: rgba(34, 211, 238, 0.04);
+}
+.next-activity-title {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cyan);
+}
+
+/* CIRCUIT STUDIO */
 .circuit-studio {
     background: var(--bg-secondary);
     border: 1px solid var(--panel-border);
@@ -277,21 +388,6 @@ header {
 }
 
 /* HISTOGRAM */
-.stat-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-}
-.stat-box {
-    background: var(--bg);
-    border: 1px solid var(--panel-border);
-    border-radius: 8px;
-    padding: 8px;
-    text-align: center;
-}
-.stat-label { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); text-transform: uppercase; }
-.stat-val { font-size: 14px; font-weight: 700; font-family: var(--font-mono); margin-top: 2px; }
-
 .hist-container { display: flex; flex-direction: column; gap: 6px; }
 .hist-row { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; }
 .hist-state { width: 38px; color: var(--cyan); font-weight: 600; }
@@ -355,7 +451,8 @@ header {
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn.secondary { background: var(--panel); border: 1px solid var(--panel-border); color: var(--text); }
 .btn.secondary:hover { border-color: var(--accent); }
-.btn.success { background: var(--green); }
+.btn.success { background: var(--green); color: #042f2e; }
+.btn.success:hover { background: #059669; }
 
 .explanation-box {
     background: var(--bg);
@@ -363,9 +460,8 @@ header {
     border-radius: 6px;
     padding: 12px;
     font-size: 13px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    max-height: 220px;
+    line-height: 1.55;
+    max-height: 240px;
     overflow-y: auto;
 }
 

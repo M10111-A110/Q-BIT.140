@@ -43,10 +43,15 @@ class SubmissionRequest(BaseModel):
 
 class AdaptiveDecisionResponse(BaseModel):
     """Structured adaptive decision resulting from evidence evaluation."""
+    decision_id: Optional[str] = None
     action: str
     target: Optional[Any] = None
     reason: str
     concept_id: Optional[str] = None
+    confidence: Optional[float] = None
+    supporting_evidence_ids: list[str] = Field(default_factory=list)
+    trigger: Optional[str] = None
+    evidence_sufficiency: Optional[str] = None
 
 
 class SubmissionResponse(BaseModel):

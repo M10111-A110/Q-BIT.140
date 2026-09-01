@@ -68,21 +68,36 @@ class QuizResult:
 @dataclass
 class AdaptiveRecommendation:
     """
-    [TIER 4: ADAPTIVE DECISION]
+    [TIER 4: ADAPTIVE DECISION & TRACE]
     Actionable next pedagogical recommendation produced deterministically by M2,
-    grounded in accumulated evidence and inferred cognitive state.
+    grounded in accumulated evidence, inferred cognitive state, and decision triggers.
     """
     action: str  # advance | gather_evidence | targeted_remediation | recommend_prerequisite | recommend_targeted_review | reinforce_current_concept
     target: str | list[str] | None
     reason: str
     concept_id: str | None = None
+    decision_id: str = field(default="")
+    confidence: float = 0.0
+    supporting_evidence_ids: list[str] = field(default_factory=list)
+    trigger: str = "default_routing"
+    evidence_sufficiency: str = "insufficient"
+
+    def __post_init__(self) -> None:
+        if not self.decision_id:
+            concept_key = (self.concept_id or "general").replace(".", "_")
+            self.decision_id = f"dec_{concept_key}_{self.action}_{int(time.time() * 1000) % 1000000:06d}"
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "decision_id": self.decision_id,
             "action": self.action,
             "target": self.target,
             "reason": self.reason,
             "concept_id": self.concept_id,
+            "confidence": self.confidence,
+            "supporting_evidence_ids": self.supporting_evidence_ids,
+            "trigger": self.trigger,
+            "evidence_sufficiency": self.evidence_sufficiency,
         }
 
     @classmethod
@@ -92,6 +107,11 @@ class AdaptiveRecommendation:
             target=d.get("target"),
             reason=str(d.get("reason", "")),
             concept_id=d.get("concept_id"),
+            decision_id=str(d.get("decision_id", "")),
+            confidence=float(d.get("confidence", 0.0)),
+            supporting_evidence_ids=list(d.get("supporting_evidence_ids", [])),
+            trigger=str(d.get("trigger", "default_routing")),
+            evidence_sufficiency=str(d.get("evidence_sufficiency", "insufficient")),
         )
 
 

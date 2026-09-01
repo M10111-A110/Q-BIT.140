@@ -6,6 +6,12 @@
     <title>Q-BIT.140 — AI-Based Interactive Quantum Algorithm Learning Platform</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- KaTeX for Grounded Quantum Math Notation -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+
     <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
@@ -15,7 +21,7 @@
     <div class="header-left">
         <div>
             <h1 class="brand-title">Q-BIT.140</h1>
-            <div class="brand-sub">Interactive Quantum Learning Platform • SIH 2026</div>
+            <div class="brand-sub">Evidence-Driven Adaptive Quantum Learning Platform • SIH 2026</div>
         </div>
     </div>
     <div class="header-right">
@@ -23,8 +29,9 @@
             <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">Learner ID:</span>
             <input type="text" id="learnerIdInput" value="demo_learner" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; width: 120px;">
         </div>
-        <button class="btn secondary" onclick="openAskModal()">🤖 Ask AI</button>
-        <button class="btn secondary" id="themeToggleBtn" onclick="toggleTheme()">☀️ Light Mode</button>
+        <button class="btn secondary" style="padding: 6px 10px; font-size: 11px;" onclick="handleResetSession()">🔄 Reset Session</button>
+        <button class="btn secondary" style="padding: 6px 10px; font-size: 11px;" onclick="openAskModal()">🤖 Ask AI</button>
+        <button class="btn secondary" id="themeToggleBtn" style="padding: 6px 10px; font-size: 11px;" onclick="toggleTheme()">☀️ Light Mode</button>
     </div>
 </header>
 
@@ -80,18 +87,22 @@
                 <span class="badge" id="simAlgorithmBadge">Grover (1024 shots)</span>
             </div>
 
-            <div class="stat-grid">
-                <div class="stat-box">
-                    <div class="stat-label">Target State</div>
-                    <div class="stat-val" style="color: var(--green);" id="resTargetState">|10⟩</div>
+            <!-- STATE TRIAD WIDGET (PHASE 1) -->
+            <div class="state-triad-grid" id="stateTriadContainer">
+                <div class="triad-box prediction" id="triadPredictionBox">
+                    <div class="triad-label">Learner Prediction</div>
+                    <div class="triad-val pred" id="resPredictedState">|01⟩</div>
+                    <div class="triad-sub" id="resPredictionStatus">Prediction Mismatch</div>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-label">Most Likely</div>
-                    <div class="stat-val" id="resMostLikely">|10⟩</div>
+                <div class="triad-box target">
+                    <div class="triad-label">Theoretical Target</div>
+                    <div class="triad-val targ" id="resTargetState">|10⟩</div>
+                    <div class="triad-sub">Marked State</div>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-label">Target Prob</div>
-                    <div class="stat-val" style="color: var(--cyan);" id="resTargetProb">100.0%</div>
+                <div class="triad-box measured">
+                    <div class="triad-label">Empirical Measured</div>
+                    <div class="triad-val meas" id="resMostLikely">|10⟩</div>
+                    <div class="triad-sub" id="resTargetProb">93.8% (1024 shots)</div>
                 </div>
             </div>
 
@@ -115,9 +126,9 @@
                 <span class="card-title" id="activityTitle">Loading Activity...</span>
                 <span class="badge" id="activityConceptBadge">quantum</span>
             </div>
-            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;" id="activityPrompt">
+            <div style="font-size: 13px; color: var(--text); line-height: 1.5;" id="activityPrompt">
                 Loading task prompt...
-            </p>
+            </div>
 
             <!-- Quantum Prediction Input (for prediction tasks) -->
             <div id="predictionInputSection" style="display: none; flex-direction: column; gap: 8px;">
@@ -135,35 +146,88 @@
             </div>
         </div>
 
-        <!-- 2. Empirical Outcome & Evidence Card -->
+        <!-- 2. Empirical Evidence & Learner Cognition Card -->
         <div class="card" id="evidenceOutcomeCard" style="display: none;">
             <div class="card-header">
-                <span class="card-title">Empirical Evidence & Cognition</span>
+                <span class="card-title">Learner Evidence & Cognitive State</span>
                 <span class="badge" id="outcomeBadge">Prediction Outcome</span>
             </div>
-            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <span style="font-size: 12px; color: var(--text-muted);">Trajectory Trend:</span>
-                <span class="badge trend" id="trajectoryTrendBadge">observing</span>
-                <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">Confidence:</span>
-                <span class="badge" id="confidenceBadge">0.35</span>
+
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                <div class="stat-box" style="text-align: left; padding: 10px; background: var(--bg); border: 1px solid var(--panel-border); border-radius: 8px;">
+                    <div class="stat-label">Cognitive Trajectory Trend</div>
+                    <div class="stat-val" style="font-size: 13px; color: var(--purple);" id="trajectoryTrendDisplay">observing</div>
+                </div>
+                <div class="stat-box" style="text-align: left; padding: 10px; background: var(--bg); border: 1px solid var(--panel-border); border-radius: 8px;">
+                    <div class="stat-label">Inference Confidence</div>
+                    <div class="stat-val" style="font-size: 13px; color: var(--cyan);" id="confidenceBadgeDisplay">35%</div>
+                </div>
+            </div>
+
+            <div style="font-size: 12px; font-family: var(--font-mono); color: var(--text); background: var(--bg); padding: 10px; border-radius: 8px; border: 1px solid var(--panel-border); display: flex; flex-direction: column; gap: 6px;">
+                <div><strong style="color: var(--text-muted);">Evidence Sufficiency:</strong> <span style="color: var(--yellow);" id="evidenceSufficiencyDisplay">Insufficient (Gathering Observations)</span></div>
+                <div><strong style="color: var(--text-muted);">Learner-State Hypothesis:</strong> <span style="color: var(--cyan);" id="inferredHypothesisDisplay">Preliminary difficulty observation</span></div>
+                <div><strong style="color: var(--text-muted);">Latest Evidence Record:</strong> <span style="color: var(--text-muted);" id="evidenceIdDisplay">ev_001</span></div>
             </div>
         </div>
 
-        <!-- 3. M2 Adaptive Decision Card -->
+        <!-- 3. "WHY THIS NEXT?" ADAPTIVE DECISION CARD (PHASE 2 CAUSAL CHAIN) -->
         <div class="card" id="adaptiveDecisionCard" style="display: none;">
             <div class="card-header">
-                <span class="card-title">M2 Adaptive Recommendation</span>
+                <span class="card-title">Why This Next? (Adaptive Recommendation)</span>
                 <span class="badge action" id="adaptiveActionBadge">gather_evidence</span>
             </div>
-            <p style="font-size: 13px; line-height: 1.4; color: var(--text);" id="adaptiveReasonText">
-                Adaptive decision explanation.
-            </p>
-            <div id="prereqGapCallout" style="display: none; font-size: 12px; color: var(--yellow); background: rgba(245, 158, 11, 0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.3);">
-                ⚠️ Prerequisite Gap Identified in Concept: <strong id="prereqGapName">Superposition</strong>
+
+            <div class="causal-chain">
+                <!-- 1. Trigger -->
+                <div class="chain-step">
+                    <div class="chain-node-title">1. Decision Trigger</div>
+                    <div class="chain-node-val" id="decisionTriggerDisplay">Single Prediction Mismatch</div>
+                </div>
+                <div class="chain-arrow">↓</div>
+
+                <!-- 2. Evidence Sufficiency -->
+                <div class="chain-step">
+                    <div class="chain-node-title">2. Evidence Sufficiency</div>
+                    <div class="chain-node-val highlight-yellow" id="chainSufficiencyDisplay">Insufficient (Gathering Observations)</div>
+                </div>
+                <div class="chain-arrow">↓</div>
+
+                <!-- 3. Inferred Hypothesis -->
+                <div class="chain-step">
+                    <div class="chain-node-title">3. Inferred Learner-State Hypothesis</div>
+                    <div class="chain-node-val highlight-cyan" id="chainHypothesisDisplay">Preliminary difficulty observation</div>
+                </div>
+                <div class="chain-arrow">↓</div>
+
+                <!-- 4. Supporting Evidence IDs -->
+                <div class="chain-step" id="supportingEvidenceSection">
+                    <div class="chain-node-title">4. Supporting Evidence Used</div>
+                    <div id="supportingEvidenceList" class="supporting-chips"></div>
+                </div>
+                <div class="chain-arrow">↓</div>
+
+                <!-- 5. Decision & Pedagogical Rationale -->
+                <div class="chain-step">
+                    <div class="chain-node-title">5. Pedagogical Action & Rationale</div>
+                    <p class="chain-reason" id="adaptiveReasonText">
+                        Adaptive pedagogical rationale explaining why this action was selected.
+                    </p>
+                </div>
+                <div class="chain-arrow">↓</div>
+
+                <!-- 6. Next Activity & Navigation -->
+                <div class="chain-step next-step">
+                    <div>
+                        <div class="chain-node-title">6. Next Recommended Activity</div>
+                        <div class="next-activity-title" id="nextTargetActivityId">Grover 2-Qubit Target State Prediction</div>
+                    </div>
+                    <button class="btn success" id="continueNextBtn" onclick="handleContinueToTarget()">Continue →</button>
+                </div>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                <span style="font-family: var(--font-mono); font-size: 11px; color: var(--cyan);" id="nextTargetActivityId">Next: act_grover_2q_predict</span>
-                <button class="btn" id="continueNextBtn" onclick="handleContinueToTarget()">Continue →</button>
+
+            <div id="prereqGapCallout" style="display: none; margin-top: 6px; font-size: 12px; color: var(--yellow); background: rgba(245, 158, 11, 0.1); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                ⚠️ Prerequisite Gap Identified in Concept: <strong id="prereqGapName">Superposition</strong>
             </div>
         </div>
 
@@ -211,6 +275,19 @@
     });
     circuitStudio.loadPreset("grover_2q");
 
+    // KaTeX Helper Function (renders LaTeX safely if KaTeX is loaded)
+    function renderMath(element) {
+        if (typeof renderMathInElement === "function" && element) {
+            renderMathInElement(element, {
+                delimiters: [
+                    { left: "$$", right: "$$", display: true },
+                    { left: "$", right: "$", display: false }
+                ],
+                throwOnError: false
+            });
+        }
+    }
+
     // Global Functions for Toolbar
     window.selectGate = function(type) {
         circuitStudio.setTool(type);
@@ -230,6 +307,13 @@
         banner.style.display = "flex";
     }
 
+    // Demo Session Reset (Phase 4)
+    window.handleResetSession = function() {
+        const newLearnerId = "demo_learner_" + Math.floor(1000 + Math.random() * 9000);
+        document.getElementById("learnerIdInput").value = newLearnerId;
+        loadActivity("act_grover_2q_predict");
+    };
+
     // App Initialization
     async function initApp() {
         try {
@@ -239,7 +323,6 @@
         } catch (err) {
             console.error("Failed to load initial activities:", err);
             showError(`Failed to load activities: ${err.message}`);
-            // Fallback rendering
             document.getElementById("activityTitle").textContent = "Grover 2-Qubit Prediction";
             document.getElementById("predictionInputSection").style.display = "flex";
         }
@@ -284,7 +367,9 @@
 
             document.getElementById("activityTitle").textContent = act.title;
             document.getElementById("activityConceptBadge").textContent = act.concept_id;
-            document.getElementById("activityPrompt").textContent = act.prompt;
+            const promptEl = document.getElementById("activityPrompt");
+            promptEl.textContent = act.prompt;
+            renderMath(promptEl);
 
             if (act.task_type === "quantum_prediction") {
                 document.getElementById("predictionInputSection").style.display = "flex";
@@ -310,7 +395,8 @@
         Object.entries(options).forEach(([letter, text]) => {
             const btn = document.createElement("div");
             btn.className = "option-btn";
-            btn.innerHTML = `<span class="option-key">${letter}.</span> <span>${text}</span>`;
+            btn.innerHTML = `<span class="option-key">${letter}.</span> <span class="opt-text">${text}</span>`;
+            renderMath(btn.querySelector(".opt-text"));
             btn.onclick = () => {
                 document.querySelectorAll(".option-btn").forEach(b => b.classList.remove("selected"));
                 btn.classList.add("selected");
@@ -343,14 +429,21 @@
             lastSubmitResult = rawResponse;
             const model = normalizeSubmissionResponse(rawResponse);
 
-            // 1. Render Quantum Simulation Result (if present)
+            // 1. Render Quantum Simulation Result & State Triad (Phase 1)
             if (model.quantum) {
                 document.getElementById("quantumResultsCard").style.display = "flex";
+
+                // Populate State Triad
+                const predBox = document.getElementById("triadPredictionBox");
+                predBox.className = `triad-box prediction ${model.learner.isCorrect ? 'correct' : ''}`;
+                document.getElementById("resPredictedState").textContent = model.learner.predictionLabel;
+                document.getElementById("resPredictionStatus").textContent = model.learner.outcomeText;
                 document.getElementById("resTargetState").textContent = model.quantum.targetStateLabel;
                 document.getElementById("resMostLikely").textContent = model.quantum.mostLikelyStateLabel;
-                document.getElementById("resTargetProb").textContent = model.quantum.targetProbabilityStr;
+                document.getElementById("resTargetProb").textContent = `${model.quantum.targetProbabilityStr} (${model.quantum.shots} shots)`;
                 document.getElementById("simAlgorithmBadge").textContent = `${model.quantum.algorithm} (${model.quantum.shots} shots)`;
 
+                // Populate Measurement Histogram
                 const hist = document.getElementById("histogramContainer");
                 hist.innerHTML = "";
                 model.quantum.probabilityBars.forEach(b => {
@@ -374,19 +467,40 @@
                 document.getElementById("quantumResultsCard").style.display = "none";
             }
 
-            // 2. Render Evidence & Trajectory
+            // 2. Render Evidence & Cognition Panel
             document.getElementById("evidenceOutcomeCard").style.display = "flex";
             const outcomeBadge = document.getElementById("outcomeBadge");
             outcomeBadge.textContent = `${model.learner.outcomeText} (Attempt #${model.learner.attemptNumber})`;
             outcomeBadge.className = `badge ${model.learner.outcomeClass}`;
 
-            document.getElementById("trajectoryTrendBadge").textContent = model.adaptive.gapTrend;
-            document.getElementById("confidenceBadge").textContent = model.adaptive.gapConfidence.toFixed(2);
+            document.getElementById("trajectoryTrendDisplay").textContent = model.adaptive.gapTrend;
+            document.getElementById("confidenceBadgeDisplay").textContent = `${Math.round(model.adaptive.gapConfidence * 100)}%`;
+            document.getElementById("evidenceSufficiencyDisplay").textContent = model.adaptive.evidenceSufficiencyLabel;
+            document.getElementById("inferredHypothesisDisplay").textContent = model.adaptive.hypothesisLabel;
+            document.getElementById("evidenceIdDisplay").textContent = model.learner.evidenceId || "N/A";
 
-            // 3. Render M2 Adaptive Decision Card
+            // 3. Render "Why This Next?" Adaptive Decision Card (Phase 2 Causal Chain)
             document.getElementById("adaptiveDecisionCard").style.display = "flex";
-            document.getElementById("adaptiveActionBadge").textContent = model.adaptive.action;
+            document.getElementById("adaptiveActionBadge").textContent = model.adaptive.actionLabel;
+            document.getElementById("decisionTriggerDisplay").textContent = model.adaptive.triggerLabel;
+            document.getElementById("chainSufficiencyDisplay").textContent = model.adaptive.evidenceSufficiencyLabel;
+            document.getElementById("chainHypothesisDisplay").textContent = model.adaptive.hypothesisLabel;
             document.getElementById("adaptiveReasonText").textContent = model.adaptive.reason;
+
+            // Render Supporting Evidence Chips
+            const suppList = document.getElementById("supportingEvidenceList");
+            suppList.innerHTML = "";
+            if (model.adaptive.supportingEvidenceIds && model.adaptive.supportingEvidenceIds.length > 0) {
+                model.adaptive.supportingEvidenceIds.forEach((eid, idx) => {
+                    const chip = document.createElement("span");
+                    chip.className = "evidence-chip";
+                    chip.textContent = `Attempt #${idx + 1} Record: ${eid}`;
+                    suppList.appendChild(chip);
+                });
+                document.getElementById("supportingEvidenceSection").style.display = "block";
+            } else {
+                document.getElementById("supportingEvidenceSection").style.display = "none";
+            }
 
             if (model.adaptive.prerequisiteGap) {
                 document.getElementById("prereqGapCallout").style.display = "block";
@@ -397,11 +511,12 @@
 
             const targetAct = model.adaptive.targetActivity;
             if (targetAct) {
-                document.getElementById("nextTargetActivityId").textContent = `Next Activity: ${targetAct}`;
+                const targetTitle = (activitiesList.find(a => a.activity_id === targetAct)?.title) || targetAct;
+                document.getElementById("nextTargetActivityId").textContent = targetTitle;
                 document.getElementById("continueNextBtn").style.display = "inline-block";
                 document.getElementById("continueNextBtn").dataset.target = targetAct;
             } else {
-                document.getElementById("nextTargetActivityId").textContent = "End of Sequence";
+                document.getElementById("nextTargetActivityId").textContent = "End of Sequence (Curriculum Complete)";
                 document.getElementById("continueNextBtn").style.display = "none";
             }
 
@@ -428,7 +543,9 @@
 
         try {
             const exp = await explainExperiment(lastSubmitResult);
-            document.getElementById("aiExplanationText").textContent = exp.explanation;
+            const expBox = document.getElementById("aiExplanationText");
+            expBox.textContent = exp.explanation;
+            renderMath(expBox);
         } catch (err) {
             // Graceful degradation: do NOT erase or fail the underlying submission
             document.getElementById("aiExplanationText").textContent = `AI Guidance Notice: Grounded explanation is temporarily unavailable (${err.message}). Your verified quantum simulation result and adaptive progress remain safely recorded.`;
@@ -456,6 +573,7 @@
             const box = document.getElementById("askAnswerBox");
             box.style.display = "block";
             box.textContent = res.answer;
+            renderMath(box);
         } catch (err) {
             showError(`Question error: ${err.message}`);
         } finally {

@@ -70,11 +70,18 @@ def build_experiment_explanation_prompt(
 
     is_correct = evidence.get("is_correct", False)
     outcome_str = "MATCH (Correct Prediction)" if is_correct else "MISMATCH (Incorrect Prediction)"
+    evidence_id = evidence.get("evidence_id", "N/A")
+    evidence_type = evidence.get("evidence_type", "N/A")
+    evidence_sufficiency = adaptive_decision.get("evidence_sufficiency", "insufficient")
+    decision_id = adaptive_decision.get("decision_id", "N/A")
+    trigger = adaptive_decision.get("trigger", "N/A")
+    supporting_ids = adaptive_decision.get("supporting_evidence_ids", [])
 
     user_content = f"""CURRICULUM CONTEXT:
 {curriculum_context}
 
 VERIFIED EXPERIMENT EVIDENCE:
+- Evidence ID: {evidence_id} (Type: {evidence_type})
 - Learner Predicted State / Response: {learner_response}
 - Theoretical Target State: {target_state}
 - Empirical Most-Likely Measured State: {most_likely_state}
@@ -83,11 +90,15 @@ VERIFIED EXPERIMENT EVIDENCE:
 - Total Shots Sampled: {shots}
 - Circuit Metadata: {json.dumps(circuit_info)}
 - Empirical Evaluation Outcome: {outcome_str}
+- Evidence Sufficiency: {evidence_sufficiency}
 - Adaptive Recommendation from M2:
+  * Decision ID: {decision_id}
   * Action: {adaptive_decision.get('action', 'N/A')}
   * Target: {adaptive_decision.get('target', 'N/A')}
   * Rationale: {adaptive_decision.get('reason', 'N/A')}
   * Concept: {adaptive_decision.get('concept_id', 'N/A')}
+  * Trigger: {trigger}
+  * Supporting Evidence IDs: {json.dumps(supporting_ids)}
 {user_q_section}
 Explain the relationship between the learner's prediction, the verified quantum result (oracle marking and amplitude amplification), and why M2 recommended this adaptive decision. Format all equations using KaTeX ($...$ or $$...$$)."""
 

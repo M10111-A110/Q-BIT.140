@@ -117,6 +117,8 @@ class LearnerModel:
         if topic not in self.graph:
             raise KeyError(f"Unknown topic '{topic}'. Known graph topics: {list(self.graph.keys())}")
 
+        canonical = resolve_concept_id(topic)
+
         # 1. Prerequisite verification
         for prereq in self.graph[topic]["prereqs"]:
             prereq_mastery = self.compute_mastery(prereq, state)
@@ -129,6 +131,9 @@ class LearnerModel:
                         f"so {topic} isn't safe to build on yet."
                     ),
                     concept_id=resolve_concept_id(prereq),
+                    confidence=0.85,
+                    trigger="prerequisite_mastery_check",
+                    evidence_sufficiency="sufficient_for_targeted_inference",
                 )
 
         mastery = self.compute_mastery(topic, state)
@@ -143,7 +148,10 @@ class LearnerModel:
                     f"{error_count} wrong answers on {topic} and mastery is only "
                     f"{mastery} — needs focused review, not just repetition."
                 ),
-                concept_id=resolve_concept_id(topic),
+                concept_id=canonical,
+                confidence=0.90,
+                trigger="repeated_concept_error_streak",
+                evidence_sufficiency="sufficient_for_targeted_inference",
             )
 
         # 3. Mastered -> unlock dependent concepts
@@ -155,7 +163,10 @@ class LearnerModel:
                 action="advance",
                 target=target,
                 reason=f"{topic} mastery is {mastery} (>= {self.threshold}) — ready to move on{next_str}.",
-                concept_id=resolve_concept_id(topic),
+                concept_id=canonical,
+                confidence=0.0,
+                trigger="mastery_threshold_passed",
+                evidence_sufficiency="sufficient_for_mastery",
             )
 
         # 4. Default: not mastered yet, no glaring error pattern -> reinforce
@@ -166,7 +177,10 @@ class LearnerModel:
                 f"{topic} mastery is {mastery} (< {self.threshold}) — "
                 f"needs more practice before moving on."
             ),
-            concept_id=resolve_concept_id(topic),
+            concept_id=canonical,
+            confidence=0.35,
+            trigger="reinforce_baseline",
+            evidence_sufficiency="insufficient",
         )
 
     def record_evidence(
@@ -186,6 +200,7 @@ class LearnerModel:
 
         canonical_concept = resolve_concept_id(evidence.concept_id)
         display_name = get_concept_display_name(canonical_concept)
+        concept_tag = canonical_concept.replace(".", "_")
 
         # ===================================================================
         # TIER 2: ACCUMULATED EVIDENCE UPDATE
@@ -222,30 +237,50 @@ class LearnerModel:
         recent_successes = [e for e in recent if e.get("is_correct", False)]
 
         prereq_gap: Optional[str] = None
+        supporting_evidence_ids: list[str] = []
+        hypothesis: str = "unassessed"
+        evidence_sufficiency: str = "insufficient"
+        trigger: str = "default_routing"
 
         if len(recent) >= 2 and recent[-1].get("is_correct", False) and recent[-2].get("is_correct", False):
             # 2 consecutive recent successes -> stable mastery
             confidence = 0.0
             status = "mastered"
             trend = "stable_mastery"
+            hypothesis = f"consistent_mastery_in_{concept_tag}"
+            evidence_sufficiency = "sufficient_for_mastery"
+            supporting_evidence_ids = [e.get("evidence_id", "") for e in [recent[-2], recent[-1]] if e.get("evidence_id")]
+            trigger = "consecutive_mastery_success"
             desc = f"Evidence demonstrates consistent understanding of {display_name} across multiple attempts."
         elif len(recent_errors) == 0 and len(recent_successes) >= 1:
             # 1 initial success -> observed mastery
             confidence = 0.0
             status = "mastered"
             trend = "mastered"
+            hypothesis = f"demonstrated_understanding_in_{concept_tag}"
+            evidence_sufficiency = "sufficient_for_observation"
+            supporting_evidence_ids = [e.get("evidence_id", "") for e in [recent[-1]] if e.get("evidence_id")]
+            trigger = "correct_prediction_advancement"
             desc = f"Evidence demonstrates consistent understanding of {display_name}."
         elif evidence.is_correct and len(concept_evidence) >= 2 and not concept_evidence[-2].get("is_correct", False):
             # Success after error -> post-intervention improvement
             confidence = 0.15
             status = "improving"
             trend = "improving"
+            hypothesis = f"post_intervention_improvement_in_{concept_tag}"
+            evidence_sufficiency = "sufficient_for_improvement_observation"
+            supporting_evidence_ids = [e.get("evidence_id", "") for e in [concept_evidence[-2], concept_evidence[-1]] if e.get("evidence_id")]
+            trigger = "post_intervention_recovery"
             desc = f"Evidence indicates post-intervention improvement in {display_name}."
         elif len(recent_errors) == 1:
             # Single error -> low confidence, no false certainty of misconception
             confidence = 0.35
             status = "observing"
             trend = "preliminary_observation"
+            hypothesis = f"preliminary_difficulty_observation_in_{concept_tag}"
+            evidence_sufficiency = "insufficient"
+            supporting_evidence_ids = [e.get("evidence_id", "") for e in [recent_errors[-1]] if e.get("evidence_id")]
+            trigger = "single_prediction_mismatch"
             desc = f"Evidence is consistent with possible difficulty in {display_name} (preliminary observation from 1 incorrect attempt)."
         else:
             # 2 or more recent errors -> persistent difficulty
@@ -253,6 +288,10 @@ class LearnerModel:
             status = "remediation_needed"
             trend = "persistent_difficulty"
             prereq_gap = self.find_unmastered_prerequisite(canonical_concept, state)
+            hypothesis = f"possible_{concept_tag}_difficulty"
+            evidence_sufficiency = "sufficient_for_targeted_inference"
+            supporting_evidence_ids = [e.get("evidence_id", "") for e in recent_errors if e.get("evidence_id")]
+            trigger = "prerequisite_bottleneck_error" if prereq_gap else "repeated_prediction_error"
             desc = f"Evidence is consistent with possible difficulty in {display_name} supported by {len(recent_errors)} repeated incorrect attempts."
 
         inference = GapInference(
@@ -263,6 +302,9 @@ class LearnerModel:
             description=desc,
             trend=trend,
             prerequisite_concept_id=prereq_gap,
+            hypothesis=hypothesis,
+            supporting_evidence_ids=supporting_evidence_ids,
+            evidence_sufficiency=evidence_sufficiency,
         )
         state.gap_inferences[canonical_concept] = inference.to_dict()
 
@@ -280,12 +322,20 @@ class LearnerModel:
                         target=activity.next_activity_id,
                         reason=f"Learner demonstrated correct understanding in '{activity.title}'. Ready to advance to '{next_act.title}'.",
                         concept_id=canonical_concept,
+                        confidence=round(confidence, 2),
+                        supporting_evidence_ids=supporting_evidence_ids,
+                        trigger=trigger,
+                        evidence_sufficiency=evidence_sufficiency,
                     )
                 return AdaptiveRecommendation(
                     action="advance",
                     target=None,
                     reason=f"Learner demonstrated correct understanding in '{activity.title}' (end of activity sequence).",
                     concept_id=canonical_concept,
+                    confidence=round(confidence, 2),
+                    supporting_evidence_ids=supporting_evidence_ids,
+                    trigger=trigger,
+                    evidence_sufficiency=evidence_sufficiency,
                 )
 
             # Not correct:
@@ -296,6 +346,10 @@ class LearnerModel:
                     target=activity.activity_id,
                     reason=f"Initial prediction mismatch on '{activity.title}'. Gathering additional evidence before selecting remediation.",
                     concept_id=canonical_concept,
+                    confidence=0.35,
+                    supporting_evidence_ids=supporting_evidence_ids,
+                    trigger="single_prediction_mismatch",
+                    evidence_sufficiency="insufficient",
                 )
 
             # Case C: Repeated errors (>= 2) -> targeted remediation
@@ -317,6 +371,10 @@ class LearnerModel:
                     target=remediation_target,
                     reason=f"Repeated prediction errors provide evidence consistent with possible difficulty in {display_name}. Recommending targeted remediation in '{remed_act.title}'.",
                     concept_id=canonical_concept,
+                    confidence=round(confidence, 2),
+                    supporting_evidence_ids=supporting_evidence_ids,
+                    trigger=trigger,
+                    evidence_sufficiency=evidence_sufficiency,
                 )
 
             return AdaptiveRecommendation(
@@ -324,6 +382,10 @@ class LearnerModel:
                 target=activity.activity_id,
                 reason=f"Repeated errors provide evidence consistent with possible difficulty in {display_name}. Reviewing current concept.",
                 concept_id=canonical_concept,
+                confidence=round(confidence, 2),
+                supporting_evidence_ids=supporting_evidence_ids,
+                trigger=trigger,
+                evidence_sufficiency=evidence_sufficiency,
             )
 
         # Fallback to general topic routing if activity is not registered
@@ -335,6 +397,10 @@ class LearnerModel:
             target=display_name,
             reason=f"Recorded evidence for {display_name}.",
             concept_id=canonical_concept,
+            confidence=round(confidence, 2),
+            supporting_evidence_ids=supporting_evidence_ids,
+            trigger=trigger,
+            evidence_sufficiency=evidence_sufficiency,
         )
 
     def get_mastery_profile(self, state: LearnerState) -> dict[str, float]:

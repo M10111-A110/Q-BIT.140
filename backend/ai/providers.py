@@ -42,12 +42,20 @@ class MockLLMProvider(LLMProvider):
         most_likely_match = re.search(r"Empirical Most-Likely Measured State:\s*([^\n]+)", user_msg)
         action_match = re.search(r"\* Action:\s*([^\n]+)", user_msg)
         reason_match = re.search(r"\* Rationale:\s*([^\n]+)", user_msg)
+        ev_id_match = re.search(r"- Evidence ID:\s*([^\n]+)", user_msg)
+        suff_match = re.search(r"- Evidence Sufficiency:\s*([^\n]+)", user_msg)
+        trigger_match = re.search(r"\* Trigger:\s*([^\n]+)", user_msg)
+        supp_match = re.search(r"\* Supporting Evidence IDs:\s*([^\n]+)", user_msg)
 
         pred_state = pred_match.group(1).strip() if pred_match else "N/A"
         target_state = target_match.group(1).strip() if target_match else "N/A"
         most_likely = most_likely_match.group(1).strip() if most_likely_match else "N/A"
         action = action_match.group(1).strip() if action_match else "advance"
         reason = reason_match.group(1).strip() if reason_match else "Continuing learning sequence."
+        evidence_id = ev_id_match.group(1).strip() if ev_id_match else "N/A"
+        sufficiency = suff_match.group(1).strip() if suff_match else "insufficient"
+        trigger = trigger_match.group(1).strip() if trigger_match else "default_routing"
+        supporting_ids = supp_match.group(1).strip() if supp_match else "[]"
 
         is_match = (pred_state == most_likely) and (most_likely != "N/A")
 
@@ -56,6 +64,14 @@ class MockLLMProvider(LLMProvider):
             if is_match else
             f"Your prediction was $|{pred_state}\\rangle$, while the empirical simulation resulted in target state $|{most_likely}\\rangle$."
         )
+
+        trace_section = (
+            f"\n\n### Evidence & Decision Trace\n\n"
+            f"- **Evidence Record**: `{evidence_id}`\n"
+            f"- **Evidence Sufficiency**: `{sufficiency}`\n"
+            f"- **Decision Trigger**: `{trigger}`\n"
+            f"- **Supporting Evidence IDs**: `{supporting_ids}`"
+        ) if evidence_id != "N/A" else ""
 
         return (
             f"### Quantum Execution Analysis\n\n"
@@ -69,6 +85,7 @@ class MockLLMProvider(LLMProvider):
             f"### Adaptive Learning Path\n\n"
             f"- **Action**: `{action}`\n"
             f"- **Pedagogical Rationale**: {reason}"
+            f"{trace_section}"
         )
 
     def _generate_qa_explanation(self, user_msg: str) -> str:

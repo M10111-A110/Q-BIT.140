@@ -38,6 +38,9 @@ class LearnerEvidence:
     learner_response: Any
     is_correct: bool
     attempt_number: int = 1
+    evidence_id: str = field(default="")
+    evidence_type: str = "derived_evaluation"     # quantum_prediction | conceptual_response | diagnostic_response | remediation_response | derived_evaluation
+    evidence_source: str = "learner"              # learner | quantum_execution | learner_and_quantum_execution | derived_evaluation
     verified_result: Optional[dict[str, Any]] = None
     evaluation_details: dict[str, Any] = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
@@ -45,6 +48,11 @@ class LearnerEvidence:
 
     def __post_init__(self) -> None:
         self.concept_id = resolve_concept_id(self.concept_id)
+        if not self.evidence_id:
+            # Deterministic, unique, human-readable evidence identifier
+            time_suffix = int(self.timestamp * 1000) % 1000000 if self.timestamp else 0
+            self.evidence_id = f"ev_{self.activity_id}_att{self.attempt_number}_{time_suffix:06d}"
+
         if self.verified_result is not None:
             if not isinstance(self.verified_result, dict):
                 raise TypeError("verified_result must be a dictionary or None")
@@ -85,6 +93,9 @@ class LearnerEvidence:
         learner_response = d.get("learner_response")
         is_correct = bool(d.get("is_correct", False))
         attempt_number = int(d.get("attempt_number", 1))
+        evidence_id = str(d.get("evidence_id", ""))
+        evidence_type = str(d.get("evidence_type", "derived_evaluation"))
+        evidence_source = str(d.get("evidence_source", "learner"))
 
         verified_result = d.get("verified_result")
         if verified_result is not None:
@@ -110,6 +121,9 @@ class LearnerEvidence:
             learner_response=learner_response,
             is_correct=is_correct,
             attempt_number=attempt_number,
+            evidence_id=evidence_id,
+            evidence_type=evidence_type,
+            evidence_source=evidence_source,
             verified_result=verified_result,
             evaluation_details=evaluation_details,
             timestamp=timestamp,
@@ -120,18 +134,21 @@ class LearnerEvidence:
 @dataclass
 class GapInference:
     """
-    [TIER 3: INFERRED LEARNER STATE]
+    [TIER 3: INFERRED LEARNER STATE & HYPOTHESIS]
     Inference derived deterministically by M2 from accumulated historical evidence.
     Represents patterns consistent with possible conceptual difficulty or mastery,
-    calibrated with an explicit deterministic confidence level without false certainty.
+    calibrated with an explicit deterministic confidence level and evidence sufficiency.
     """
     concept_id: str
-    confidence: float  # 0.0 (unassessed/no gap) to 1.0 (high confidence gap)
-    status: str        # mastered | observing | remediation_needed | improving | unassessed
+    confidence: float                                   # 0.0 (unassessed/no gap) to 1.0 (high confidence gap)
+    status: str                                         # mastered | observing | remediation_needed | improving | unassessed
     supporting_evidence_count: int
     description: str
-    trend: str = "unassessed"  # stable_mastery | improving | persistent_difficulty | preliminary_observation | regressing | unassessed
+    trend: str = "unassessed"                           # stable_mastery | improving | persistent_difficulty | preliminary_observation | unassessed
     prerequisite_concept_id: Optional[str] = None
+    hypothesis: str = "unassessed"                      # e.g. possible_measurement_probability_difficulty
+    supporting_evidence_ids: list[str] = field(default_factory=list) # Concrete evidence IDs supporting this inference
+    evidence_sufficiency: str = "insufficient"          # insufficient | sufficient_for_targeted_inference | sufficient_for_improvement_observation | sufficient_for_mastery | sufficient_for_observation
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize GapInference into a JSON-compatible dictionary."""
@@ -155,6 +172,9 @@ class GapInference:
             description=str(d.get("description", "")),
             trend=str(d.get("trend", "unassessed")),
             prerequisite_concept_id=prereq,
+            hypothesis=str(d.get("hypothesis", "unassessed")),
+            supporting_evidence_ids=list(d.get("supporting_evidence_ids", [])),
+            evidence_sufficiency=str(d.get("evidence_sufficiency", "insufficient")),
         )
 
 
@@ -198,6 +218,8 @@ def evaluate_quantum_prediction(
         activity_id=activity_id,
         concept_id=resolve_concept_id(concept_id),
         attempt_number=attempt_number,
+        evidence_type="quantum_prediction",
+        evidence_source="learner_and_quantum_execution",
         learner_response=cleaned_pred,
         verified_result=simulation_result,
         is_correct=is_match,
@@ -233,6 +255,8 @@ def evaluate_conceptual_response(
         activity_id=activity_id,
         concept_id=resolve_concept_id(concept_id),
         attempt_number=attempt_number,
+        evidence_type="conceptual_response",
+        evidence_source="learner",
         learner_response=cleaned_selected,
         verified_result=None,
         is_correct=is_correct,
