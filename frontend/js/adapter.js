@@ -260,3 +260,74 @@ export function normalizeSubmissionResponse(response) {
         },
     };
 }
+
+/**
+ * Compute aggregate UI achievement badge metrics from authoritative M2 state.
+ * @param {Object} state - Learner state dictionary
+ * @param {Array} activities - List of curriculum activities
+ * @returns {Object}
+ */
+export function computeBadgeMetrics(state = {}, activities = []) {
+    const attempts = state.attempts || {};
+    const errors = state.errors || {};
+    const conceptScores = state.concept_scores || {};
+
+    let totalAttempts = 0;
+    let totalErrors = 0;
+    for (const cnt of Object.values(attempts)) totalAttempts += Number(cnt) || 0;
+    for (const cnt of Object.values(errors)) totalErrors += Number(cnt) || 0;
+
+    const correctAttempts = Math.max(0, totalAttempts - totalErrors);
+    const accuracyPct = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 100;
+
+    const completedCount = Object.keys(attempts).length;
+    const totalCount = activities.length || 4;
+
+    const conceptVals = Object.values(conceptScores);
+    const avgMastery = conceptVals.length > 0 ? (conceptVals.reduce((a, b) => a + Number(b), 0) / conceptVals.length) : 0.5;
+    const points = Math.round(avgMastery * 500 + completedCount * 125);
+    const masteryPct = Math.round(avgMastery * 100);
+    const streak = Math.max(1, completedCount);
+
+    return {
+        streak,
+        completedCount,
+        totalCount,
+        masteryPct,
+        points,
+        accuracyPct,
+    };
+}
+
+/**
+ * Load local learner profile preferences from browser localStorage.
+ * @param {string} learnerId
+ * @returns {Object}
+ */
+export function getLearnerProfile(learnerId = "demo_learner") {
+    try {
+        const stored = localStorage.getItem(`qbit_profile_${learnerId}`);
+        if (stored) return JSON.parse(stored);
+    } catch {
+        // ignore localStorage access error
+    }
+    return {
+        name: learnerId === "demo_learner" ? "Quantum Explorer" : learnerId,
+        studying: "Grover's Algorithm & Quantum State Triads",
+        avatar: "",
+        theme: "dark",
+    };
+}
+
+/**
+ * Save local learner profile preferences to browser localStorage.
+ * @param {string} learnerId
+ * @param {Object} profile
+ */
+export function saveLearnerProfile(learnerId = "demo_learner", profile = {}) {
+    try {
+        localStorage.setItem(`qbit_profile_${learnerId}`, JSON.stringify(profile));
+    } catch {
+        // ignore localStorage access error
+    }
+}

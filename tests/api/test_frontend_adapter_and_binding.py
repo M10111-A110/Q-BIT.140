@@ -229,9 +229,31 @@ def test_frontend_ai_failure_does_not_erase_submission():
 
 
 def test_frontend_static_serving():
-    """Verify that FastAPI mounts and serves the frontend index.html."""
+    """Verify that FastAPI mounts and serves the enhanced hybrid frontend index.html."""
     client = TestClient(app)
     res = client.get("/")
     assert res.status_code == 200
-    assert "Q-BIT.140" in res.text
-    assert "Interactive Quantum Circuit Studio" in res.text
+    html = res.text
+    # Core brand & structure
+    assert "Q-BIT.140" in html
+    assert "Interactive Quantum Circuit Studio" in html
+    # Hybrid visual enhancements
+    assert '<canvas id="fx"></canvas>' in html
+    assert 'class="atom"' in html
+    assert 'id="badgeStreak"' in html
+    assert 'id="badgeMastery"' in html
+    assert 'id="badgePoints"' in html
+    assert 'id="badgeAccuracy"' in html
+    # Profile modal & subviews
+    assert 'id="profileModal"' in html
+    assert 'id="profileView-menu"' in html
+    assert 'id="profileView-edit"' in html
+    assert 'id="profileView-settings"' in html
+    # Core quantum & adaptive IDs
+    assert 'id="circuitWireGrid"' in html
+    assert 'id="quantumResultsCard"' in html
+    assert 'id="stateTriadContainer"' in html
+    assert 'id="histogramContainer"' in html
+    assert 'id="adaptiveDecisionCard"' in html
+    assert 'id="aiGuidanceCard"' in html
+    assert 'id="askModal"' in html

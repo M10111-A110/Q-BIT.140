@@ -16,14 +16,55 @@
 </head>
 <body>
 
+<!-- BACKGROUND PARTICLE CANVAS (DECORATIVE QUANTUM CLOUD) -->
+<canvas id="fx"></canvas>
+
 <!-- TOP BAR -->
 <header>
     <div class="header-left">
+        <div class="atom" title="Q-BIT Quantum Engine">
+            <svg viewBox="0 0 36 36" fill="none">
+                <circle cx="18" cy="18" r="4" fill="url(#coreGlow)" />
+                <ellipse class="orbit" cx="18" cy="18" rx="14" ry="5" stroke="var(--cyan)" stroke-width="1.2" opacity="0.85" transform="rotate(30 18 18)" />
+                <ellipse class="orbit o2" cx="18" cy="18" rx="14" ry="5" stroke="var(--accent)" stroke-width="1.2" opacity="0.85" transform="rotate(-30 18 18)" />
+                <defs>
+                    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#FFFFFF" />
+                        <stop offset="100%" stop-color="var(--cyan)" />
+                    </radialGradient>
+                </defs>
+            </svg>
+        </div>
         <div>
             <h1 class="brand-title">Q-BIT.140</h1>
             <div class="brand-sub">Evidence-Driven Adaptive Quantum Learning Platform • SIH 2026</div>
         </div>
     </div>
+
+    <!-- TOPBAR ACHIEVEMENT CHIPS -->
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="topbarBadges">
+        <div class="chip" id="chipStreak" title="Current activity streak">
+            <span class="chip-icon">🔥</span>
+            <span class="chip-label">Streak</span>
+            <span class="chip-val flame" id="badgeStreak">1</span>
+        </div>
+        <div class="chip" id="chipMastery" title="Concepts mastered">
+            <span class="chip-icon">🏆</span>
+            <span class="chip-label">Mastery</span>
+            <span class="chip-val green" id="badgeMastery">1/4</span>
+        </div>
+        <div class="chip" id="chipPoints" title="Estimated quantum knowledge points">
+            <span class="chip-icon">⭐</span>
+            <span class="chip-label">Points</span>
+            <span class="chip-val gold" id="badgePoints">250</span>
+        </div>
+        <div class="chip" id="chipAccuracy" title="Overall prediction and quiz accuracy">
+            <span class="chip-icon">🎯</span>
+            <span class="chip-label">Accuracy</span>
+            <span class="chip-val" id="badgeAccuracy">100%</span>
+        </div>
+    </div>
+
     <div class="header-right">
         <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">Learner ID:</span>
@@ -31,7 +72,7 @@
         </div>
         <button class="btn secondary" style="padding: 6px 10px; font-size: 11px;" onclick="handleResetSession()">🔄 Reset Session</button>
         <button class="btn secondary" style="padding: 6px 10px; font-size: 11px;" onclick="openAskModal()">🤖 Ask AI</button>
-        <button class="btn secondary" id="themeToggleBtn" style="padding: 6px 10px; font-size: 11px;" onclick="toggleTheme()">☀️ Light Mode</button>
+        <button class="profile-btn" id="profileOpenBtn" onclick="openProfileModal()" title="Learner Profile & Settings">QE</button>
     </div>
 </header>
 
@@ -352,9 +393,80 @@
     </div>
 </div>
 
+<!-- LEARNER PROFILE & SETTINGS MODAL -->
+<div class="modal-overlay" id="profileModal" style="display: none;">
+    <div class="modal-card profile-modal-card">
+        <div class="card-header">
+            <span class="card-title" id="profileModalTitle">Learner Profile</span>
+            <button class="btn secondary" style="padding: 2px 8px; font-size: 11px;" onclick="closeProfileModal()">✕</button>
+        </div>
+
+        <!-- VIEW 1: MENU -->
+        <div class="profile-view active" id="profileView-menu">
+            <div class="profile-header-preview">
+                <div class="profile-avatar-large" id="profileAvatar">QE</div>
+                <div style="flex: 1;">
+                    <div style="font-family: var(--font-display); font-size: 16px; font-weight: 700;" id="profileNameDisplay">Quantum Explorer</div>
+                    <div style="font-size: 12px; color: var(--text-muted);" id="profileStudyingDisplay">Grover's Algorithm & Quantum State Triads</div>
+                </div>
+            </div>
+
+            <div class="menu-item" onclick="showProfileView('edit')">
+                <span>✏️ Edit Profile Details</span>
+                <span>→</span>
+            </div>
+            <div class="menu-item" onclick="showProfileView('settings')">
+                <span>⚙️ Preferences & Display Settings</span>
+                <span>→</span>
+            </div>
+            <div class="toggle-row" id="darkModeToggleRow" onclick="toggleThemeFromModal()">
+                <span style="font-size: 13px; font-weight: 500;">🌙 Theme Mode</span>
+                <div class="toggle on" id="darkModeToggle"></div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: EDIT PROFILE -->
+        <div class="profile-view" id="profileView-edit">
+            <div style="font-size: 12px; font-family: var(--font-mono); color: var(--text-muted); margin-bottom: 8px;">CUSTOMIZE AVATAR & INFO:</div>
+
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Upload Profile Photo / Avatar:</label>
+            <input type="file" id="avatarInput" accept="image/*" class="profile-input" style="padding: 6px;" />
+
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Display Name:</label>
+            <input type="text" id="nameInput" class="profile-input" value="Quantum Explorer" placeholder="Enter your name" />
+
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Learning Focus / Bio:</label>
+            <input type="text" id="studyingInput" class="profile-input" value="Grover's Algorithm & Quantum State Triads" placeholder="What are you studying?" />
+
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="btn secondary" onclick="showProfileView('menu')">Back</button>
+                <button class="btn" onclick="saveProfileDetails()">Save Profile</button>
+            </div>
+        </div>
+
+        <!-- VIEW 3: SETTINGS -->
+        <div class="profile-view" id="profileView-settings">
+            <div style="font-size: 12px; font-family: var(--font-mono); color: var(--text-muted); margin-bottom: 8px;">SESSION & PREFERENCES:</div>
+
+            <div class="menu-item" onclick="handleResetSession(); closeProfileModal();">
+                <span>🔄 Reset Active Learner Session</span>
+                <span style="font-size: 11px; color: var(--yellow);">Generate New ID</span>
+            </div>
+
+            <div style="padding: 10px; background: var(--bg); border: 1px solid var(--panel-border); border-radius: 8px; margin-bottom: 12px; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">
+                💡 Active Learner State is managed securely in-memory by the M4 FastAPI Gateway.
+            </div>
+
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="btn secondary" onclick="showProfileView('menu')">Back to Menu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script type="module">
     import { fetchActivities, fetchActivity, submitPrediction, explainExperiment, askConceptualQuestion } from './js/api_client.js';
-    import { normalizeSubmissionResponse, formatStateLabel, formatPercentage } from './js/adapter.js';
+    import { normalizeSubmissionResponse, formatStateLabel, formatPercentage, computeBadgeMetrics, getLearnerProfile, saveLearnerProfile } from './js/adapter.js';
     import { CircuitStudio, GATE_DEFINITIONS } from './js/circuit_view.js';
 
     let activitiesList = [];
@@ -364,8 +476,73 @@
     let lastSubmitResult = null;
     let normalizedModel = null;
     let circuitStudio = null;
+    let currentLearnerState = {};
 
-    // Initialize Circuit Studio with gate selection hook
+    // -------------------------------------------------------------------
+    // 1. Particle Cloud Background Animation (Non-blocking & graceful)
+    // -------------------------------------------------------------------
+    function initBackgroundParticles() {
+        const canvas = document.getElementById('fx');
+        if (!canvas || !canvas.getContext) return;
+        const ctx = canvas.getContext('2d');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let w, h, particles;
+
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+
+        function initParticles() {
+            const count = Math.min(65, Math.floor((w * h) / 22000));
+            particles = Array.from({ length: count }, () => ({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                r: Math.random() * 1.5 + 0.5,
+                vx: (Math.random() - 0.5) * 0.15,
+                vy: (Math.random() - 0.5) * 0.15,
+                hue: Math.random() > 0.5 ? '59,130,246' : '34,211,238',
+                a: Math.random() * 0.45 + 0.15
+            }));
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, w, h);
+            particles.forEach(p => {
+                if (!reduceMotion) {
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+                    if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+                }
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${p.hue},${p.a})`;
+                ctx.fill();
+            });
+            if (!reduceMotion) requestAnimationFrame(draw);
+        }
+
+        resize();
+        initParticles();
+        draw();
+        window.addEventListener('resize', () => { resize(); initParticles(); if (reduceMotion) draw(); });
+    }
+    initBackgroundParticles();
+
+    // -------------------------------------------------------------------
+    // 2. Mousemove Card Halo Glow
+    // -------------------------------------------------------------------
+    document.querySelectorAll('.card, .circuit-studio').forEach(box => {
+        box.addEventListener('mousemove', e => {
+            const rect = box.getBoundingClientRect();
+            box.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+            box.style.setProperty('--my', `${e.clientY - rect.top}px`);
+        });
+    });
+
+    // -------------------------------------------------------------------
+    // 3. Initialize Circuit Studio with gate selection hook
+    // -------------------------------------------------------------------
     circuitStudio = new CircuitStudio("circuitWireGrid", {
         numQubits: 2,
         numColumns: 6,
@@ -378,7 +555,7 @@
     });
     circuitStudio.loadPreset("grover_2q");
 
-    // KaTeX Helper Function (renders LaTeX safely if KaTeX is loaded)
+    // KaTeX Helper Function
     function renderMath(element) {
         if (typeof renderMathInElement === "function" && element) {
             renderMathInElement(element, {
@@ -391,7 +568,121 @@
         }
     }
 
-    // Global Functions for Toolbar
+    // -------------------------------------------------------------------
+    // 4. Achievement Badges Updater (M2-driven)
+    // -------------------------------------------------------------------
+    function updateBadgeDisplays(learnerState = {}) {
+        const metrics = computeBadgeMetrics(learnerState, activitiesList);
+        const streakEl = document.getElementById("badgeStreak");
+        const masteryEl = document.getElementById("badgeMastery");
+        const pointsEl = document.getElementById("badgePoints");
+        const accEl = document.getElementById("badgeAccuracy");
+
+        if (streakEl) streakEl.textContent = metrics.streak;
+        if (masteryEl) masteryEl.textContent = `${metrics.completedCount}/${metrics.totalCount}`;
+        if (pointsEl) pointsEl.textContent = metrics.points;
+        if (accEl) accEl.textContent = `${metrics.accuracyPct}%`;
+    }
+
+    // -------------------------------------------------------------------
+    // 5. Learner Profile & Modal Handlers
+    // -------------------------------------------------------------------
+    window.openProfileModal = function() {
+        const modal = document.getElementById("profileModal");
+        modal.style.display = "flex";
+        showProfileView('menu');
+    };
+
+    window.closeProfileModal = function() {
+        document.getElementById("profileModal").style.display = "none";
+    };
+
+    const profileTitles = { menu: 'Learner Profile', edit: 'Edit Profile Details', settings: 'Preferences & Settings' };
+    window.showProfileView = function(view) {
+        document.querySelectorAll('.profile-view').forEach(v => v.classList.remove('active'));
+        const targetView = document.getElementById(`profileView-${view}`);
+        if (targetView) targetView.classList.add('active');
+        const titleEl = document.getElementById('profileModalTitle');
+        if (titleEl) titleEl.textContent = profileTitles[view] || 'Learner Profile';
+    };
+
+    function loadProfileOnBoot() {
+        const learnerId = document.getElementById("learnerIdInput").value.trim() || "demo_learner";
+        const profile = getLearnerProfile(learnerId);
+
+        const nameDisp = document.getElementById("profileNameDisplay");
+        const studyDisp = document.getElementById("profileStudyingDisplay");
+        const nameInp = document.getElementById("nameInput");
+        const studyInp = document.getElementById("studyingInput");
+        const avatarEl = document.getElementById("profileAvatar");
+        const openBtn = document.getElementById("profileOpenBtn");
+
+        if (nameDisp) nameDisp.textContent = profile.name;
+        if (studyDisp) studyDisp.textContent = profile.studying;
+        if (nameInp) nameInp.value = profile.name;
+        if (studyInp) studyInp.value = profile.studying;
+
+        if (profile.avatar) {
+            if (avatarEl) { avatarEl.style.backgroundImage = `url(${profile.avatar})`; avatarEl.textContent = ''; }
+            if (openBtn) { openBtn.style.backgroundImage = `url(${profile.avatar})`; openBtn.textContent = ''; }
+        } else {
+            const initials = profile.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'QE';
+            if (avatarEl) { avatarEl.style.backgroundImage = ''; avatarEl.textContent = initials; }
+            if (openBtn) { openBtn.style.backgroundImage = ''; openBtn.textContent = initials; }
+        }
+
+        // Apply theme preference
+        const isDark = profile.theme !== "light";
+        document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+        const toggle = document.getElementById("darkModeToggle");
+        if (toggle) toggle.classList.toggle("on", isDark);
+    }
+
+    window.saveProfileDetails = function() {
+        const learnerId = document.getElementById("learnerIdInput").value.trim() || "demo_learner";
+        const profile = getLearnerProfile(learnerId);
+        profile.name = document.getElementById("nameInput").value.trim() || profile.name;
+        profile.studying = document.getElementById("studyingInput").value.trim() || profile.studying;
+        saveLearnerProfile(learnerId, profile);
+        loadProfileOnBoot();
+        showProfileView('menu');
+    };
+
+    // Avatar File Input Change Listener
+    const avatarInput = document.getElementById('avatarInput');
+    if (avatarInput) {
+        avatarInput.addEventListener('change', () => {
+            const file = avatarInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const learnerId = document.getElementById("learnerIdInput").value.trim() || "demo_learner";
+                const profile = getLearnerProfile(learnerId);
+                profile.avatar = e.target.result;
+                saveLearnerProfile(learnerId, profile);
+                loadProfileOnBoot();
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    window.toggleThemeFromModal = function() {
+        const html = document.documentElement;
+        const isDark = html.getAttribute("data-theme") === "dark";
+        const newTheme = isDark ? "light" : "dark";
+        html.setAttribute("data-theme", newTheme);
+        const toggle = document.getElementById("darkModeToggle");
+        if (toggle) toggle.classList.toggle("on", !isDark);
+
+        const learnerId = document.getElementById("learnerIdInput").value.trim() || "demo_learner";
+        const profile = getLearnerProfile(learnerId);
+        profile.theme = newTheme;
+        saveLearnerProfile(learnerId, profile);
+    };
+
+    // -------------------------------------------------------------------
+    // 6. Global Functions for Toolbar & Interactions
+    // -------------------------------------------------------------------
     window.selectGate = function(type) {
         circuitStudio.setTool(type);
         document.querySelectorAll(".gate-btn").forEach(b => b.classList.remove("active-tool"));
@@ -406,25 +697,21 @@
     window.clearStudioCircuit = function() { circuitStudio.clear(); };
     window.loadCircuitPreset = function(name) { circuitStudio.loadPreset(name); };
 
-    // Quick select basis pills
     window.selectBasisPill = function(basis) {
         document.querySelectorAll(".basis-pill").forEach(p => p.classList.remove("selected"));
         event.target.classList.add("selected");
         document.getElementById("predictionField").value = basis;
     };
 
-    // Toggle Causal Chain Steps
     window.toggleChainStep = function(stepElement) {
         stepElement.classList.toggle("expanded");
     };
 
-    // Toggle Compare States Panel
     window.toggleComparePanel = function() {
         const panel = document.getElementById("comparePanel");
         panel.style.display = panel.style.display === "none" ? "flex" : "none";
     };
 
-    // State Inspector
     window.inspectState = function(stateObj) {
         if (!stateObj || !normalizedModel) return;
         const drawer = document.getElementById("stateInspectorDrawer");
@@ -466,18 +753,22 @@
         banner.style.display = "flex";
     }
 
-    // Demo Session Reset (Phase 4)
     window.handleResetSession = function() {
         const newLearnerId = "demo_learner_" + Math.floor(1000 + Math.random() * 9000);
         document.getElementById("learnerIdInput").value = newLearnerId;
+        loadProfileOnBoot();
         loadActivity("act_grover_2q_predict");
     };
 
-    // App Initialization
+    // -------------------------------------------------------------------
+    // 7. App Initialization & Curriculum Loading
+    // -------------------------------------------------------------------
     async function initApp() {
         try {
             activitiesList = await fetchActivities();
             renderJourneyTrack();
+            loadProfileOnBoot();
+            updateBadgeDisplays({});
             await loadActivity(currentActivityId);
         } catch (err) {
             console.error("Failed to load initial activities:", err);
@@ -602,7 +893,12 @@
             normalizedModel = normalizeSubmissionResponse(rawResponse);
             const model = normalizedModel;
 
-            // 1. Render Quantum Simulation Result & State Triad (Requirement 3)
+            if (model.learnerState) {
+                currentLearnerState = model.learnerState;
+                updateBadgeDisplays(currentLearnerState);
+            }
+
+            // 1. Render Quantum Simulation Result & State Triad
             if (model.quantum) {
                 document.getElementById("quantumResultsCard").style.display = "flex";
 
@@ -665,7 +961,7 @@
             document.getElementById("inferredHypothesisDisplay").textContent = model.adaptive.hypothesisLabel;
             document.getElementById("evidenceIdDisplay").textContent = model.learner.evidenceId || "N/A";
 
-            // 3. Render "Why This Next?" Adaptive Decision Card (Requirement 4)
+            // 3. Render "Why This Next?" Adaptive Decision Card
             document.getElementById("adaptiveDecisionCard").style.display = "flex";
             document.getElementById("adaptiveActionBadge").textContent = model.adaptive.actionLabel;
             document.getElementById("decisionTriggerDisplay").textContent = model.adaptive.triggerLabel;
@@ -734,7 +1030,6 @@
             expBox.textContent = exp.explanation;
             renderMath(expBox);
         } catch (err) {
-            // Graceful degradation: do NOT erase or fail the underlying submission
             document.getElementById("aiExplanationText").textContent = `AI Guidance Notice: Grounded explanation is temporarily unavailable (${err.message}). Your verified quantum simulation result and adaptive progress remain safely recorded.`;
         } finally {
             btn.disabled = false; btn.textContent = "Explain My Result";
@@ -769,10 +1064,7 @@
     };
 
     window.toggleTheme = function() {
-        const html = document.documentElement;
-        const isDark = html.getAttribute("data-theme") === "dark";
-        html.setAttribute("data-theme", isDark ? "light" : "dark");
-        document.getElementById("themeToggleBtn").textContent = isDark ? "🌙 Dark Mode" : "☀️ Light Mode";
+        toggleThemeFromModal();
     };
 
     // Boot
