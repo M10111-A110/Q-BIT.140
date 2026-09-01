@@ -134,12 +134,14 @@ pip install -r requirements.txt
 ### 4. Run the Application
 Start the FastAPI server (serves the API and interactive frontend):
 ```bash
-uvicorn backend.api.main:app --reload --port 8000
+python -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8000
 ```
 Open your browser at:
 ```text
-http://127.0.0.1:8000/frontend/index.html
+http://127.0.0.1:8000/
 ```
+
+*Note: Environment variables (`.env`) are optional. If unconfigured, the system automatically uses the verified `InMemoryLearnerRepository` and `MockLLMProvider`.*
 
 ---
 

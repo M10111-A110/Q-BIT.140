@@ -808,6 +808,27 @@ header {
     overflow-y: auto;
 }
 
+/* CUSTOM SLEEK SCROLLBARS */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(91, 140, 255, 0.25);
+    border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--cyan);
+}
+
+/* TACTILE PRESS FEEDBACK */
+.btn:active, .profile-btn:active, .chip:active, .basis-pill:active, .option-btn:active, .journey-node:active, .gate-btn:active {
+    transform: scale(0.98);
+}
+
 /* MODALS */
 .modal-overlay, .overlay {
     position: fixed;
@@ -834,6 +855,12 @@ header {
     flex-direction: column;
     gap: 14px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    animation: modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalScaleIn {
+    from { opacity: 0; transform: scale(0.96) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 /* PROFILE MODAL SPECIFICS */
@@ -971,5 +998,25 @@ header {
     header {
         flex-wrap: wrap;
         gap: 10px;
+    }
+    .header-left {
+        flex-wrap: wrap;
+    }
+    #topbarBadges {
+        order: 3;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    header {
+        padding: 10px 14px;
+    }
+    .journey-bar {
+        padding: 6px 14px;
+    }
+    .pane {
+        padding: 12px 14px;
     }
 }
