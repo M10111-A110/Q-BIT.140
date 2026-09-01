@@ -10,22 +10,46 @@ from typing import Any, Optional
 from .models import LearnerState
 
 
+class PersistenceError(RuntimeError):
+    """Base exception raised when a repository storage operation fails."""
+    pass
+
+
+class StorageUnavailableError(PersistenceError):
+    """Raised when persistent storage (e.g. database, filesystem) cannot be reached or fails during I/O."""
+    pass
+
+
 class LearnerRepository(ABC):
-    """Abstract repository boundary for learner state persistence."""
+    """
+    Abstract repository boundary for learner state persistence.
+    Distinguishes clean missing-learner state from storage/database failures.
+    """
 
     @abstractmethod
     def get(self, user_id: str) -> LearnerState:
-        """Retrieve learner state or return a fresh default instance."""
+        """
+        Retrieve learner state.
+        Returns a fresh default LearnerState(user_id=user_id) if learner does not exist in storage.
+        Raises StorageUnavailableError if storage is unreachable or query fails.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def save(self, state: LearnerState) -> None:
-        """Persist updated learner state."""
+        """
+        Persist updated learner state.
+        Raises StorageUnavailableError if storage is unreachable or write fails.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def exists(self, user_id: str) -> bool:
-        """Check if learner state exists in storage."""
+        """
+        Check if learner state exists in storage.
+        Returns True if record exists, False if missing.
+        Raises StorageUnavailableError if storage is unreachable or query fails.
+        """
         raise NotImplementedError
 
 
@@ -60,7 +84,10 @@ class JSONFileLearnerRepository(LearnerRepository):
 
     def __init__(self, directory: str | Path = "learner_data") -> None:
         self.directory = Path(directory)
-        self.directory.mkdir(parents=True, exist_ok=True)
+        try:
+            self.directory.mkdir(parents=True, exist_ok=True)
+        except Exception as exc:
+            raise StorageUnavailableError(f"Failed to initialize directory '{self.directory}': {exc}") from exc
 
     def _path(self, user_id: str) -> Path:
         return self.directory / f"{user_id}.json"
@@ -68,9 +95,12 @@ class JSONFileLearnerRepository(LearnerRepository):
     def get(self, user_id: str) -> LearnerState:
         path = self._path(user_id)
         if path.exists():
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-            return LearnerState.from_dict(data)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+                return LearnerState.from_dict(data)
+            except Exception as exc:
+                raise StorageUnavailableError(f"Failed to read learner state file for '{user_id}': {exc}") from exc
         return LearnerState(user_id=user_id)
 
     def load(self, user_id: str) -> LearnerState:
@@ -79,11 +109,17 @@ class JSONFileLearnerRepository(LearnerRepository):
 
     def save(self, state: LearnerState) -> None:
         path = self._path(state.user_id)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(asdict(state), f, indent=2)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(asdict(state), f, indent=2)
+        except Exception as exc:
+            raise StorageUnavailableError(f"Failed to write learner state file for '{state.user_id}': {exc}") from exc
 
     def exists(self, user_id: str) -> bool:
-        return self._path(user_id).exists()
+        try:
+            return self._path(user_id).exists()
+        except Exception as exc:
+            raise StorageUnavailableError(f"Failed to check existence for '{user_id}': {exc}") from exc
 
 
 class SupabaseLearnerRepository(LearnerRepository):
@@ -91,7 +127,7 @@ class SupabaseLearnerRepository(LearnerRepository):
     Supabase/PostgreSQL repository adapter.
     Persists LearnerState domain models into the 'learner_states' table.
     Uses supabase-py client when credentials are provided in the environment.
-    Falls back gracefully if client or table is unavailable.
+    Strictly differentiates between a non-existent learner record and database/network errors.
     """
 
     def __init__(
@@ -110,49 +146,60 @@ class SupabaseLearnerRepository(LearnerRepository):
                 try:
                     from supabase import create_client
                     self.client = create_client(supabase_url, supabase_key)
-                except Exception:
-                    self.client = None
+                except Exception as exc:
+                    raise StorageUnavailableError(f"Failed to initialize Supabase client: {exc}") from exc
 
     def get(self, user_id: str) -> LearnerState:
-        if self.client is not None:
+        if self.client is None:
+            raise StorageUnavailableError("Supabase client is not configured (missing credentials or client instance)")
+
+        try:
+            response = (
+                self.client.table(self.table_name)
+                .select("state_data")
+                .eq("user_id", user_id)
+                .execute()
+            )
+        except Exception as exc:
+            raise StorageUnavailableError(f"Database query failed for learner '{user_id}': {exc}") from exc
+
+        if response and getattr(response, "data", None) and len(response.data) > 0:
+            state_data = response.data[0].get("state_data", {})
             try:
-                response = (
-                    self.client.table(self.table_name)
-                    .select("state_data")
-                    .eq("user_id", user_id)
-                    .execute()
-                )
-                if response.data and len(response.data) > 0:
-                    state_data = response.data[0].get("state_data", {})
-                    return LearnerState.from_dict(state_data)
-            except Exception:
-                pass
+                return LearnerState.from_dict(state_data)
+            except Exception as exc:
+                raise StorageUnavailableError(f"Malformed persisted learner state for '{user_id}': {exc}") from exc
+
+        # Clean missing learner in healthy database
         return LearnerState(user_id=user_id)
 
     def save(self, state: LearnerState) -> None:
-        if self.client is not None:
-            try:
-                payload = {
-                    "user_id": state.user_id,
-                    "state_data": state.to_dict(),
-                }
-                self.client.table(self.table_name).upsert(payload).execute()
-            except Exception:
-                pass
+        if self.client is None:
+            raise StorageUnavailableError("Supabase client is not configured (missing credentials or client instance)")
+
+        try:
+            payload = {
+                "user_id": state.user_id,
+                "state_data": state.to_dict(),
+            }
+            self.client.table(self.table_name).upsert(payload).execute()
+        except Exception as exc:
+            raise StorageUnavailableError(f"Database upsert failed for learner '{state.user_id}': {exc}") from exc
 
     def exists(self, user_id: str) -> bool:
-        if self.client is not None:
-            try:
-                response = (
-                    self.client.table(self.table_name)
-                    .select("user_id")
-                    .eq("user_id", user_id)
-                    .execute()
-                )
-                return bool(response.data and len(response.data) > 0)
-            except Exception:
-                pass
-        return False
+        if self.client is None:
+            raise StorageUnavailableError("Supabase client is not configured (missing credentials or client instance)")
+
+        try:
+            response = (
+                self.client.table(self.table_name)
+                .select("user_id")
+                .eq("user_id", user_id)
+                .execute()
+            )
+            return bool(response and getattr(response, "data", None) and len(response.data) > 0)
+        except Exception as exc:
+            raise StorageUnavailableError(f"Database existence check failed for '{user_id}': {exc}") from exc
 
 
 # Backward-compatible alias matching original M2 name

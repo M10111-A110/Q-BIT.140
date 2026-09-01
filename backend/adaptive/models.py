@@ -67,7 +67,11 @@ class QuizResult:
 
 @dataclass
 class AdaptiveRecommendation:
-    """Actionable recommendation produced by the adaptive learner model."""
+    """
+    [TIER 4: ADAPTIVE DECISION]
+    Actionable next pedagogical recommendation produced deterministically by M2,
+    grounded in accumulated evidence and inferred cognitive state.
+    """
     action: str  # advance | gather_evidence | targeted_remediation | recommend_prerequisite | recommend_targeted_review | reinforce_current_concept
     target: str | list[str] | None
     reason: str
@@ -94,18 +98,18 @@ class AdaptiveRecommendation:
 @dataclass
 class LearnerState:
     """
-    Persistent state of an individual learner tracking concept performance,
-    history trajectories, error records, empirical evidence history, and
-    derived gap inferences.
+    [TIER 2: ACCUMULATED EVIDENCE & PERSISTENT REPOSITORY STATE]
+    Tracks empirical attempt records, chronological evidence history, score trajectories,
+    and derived gap inferences across time for an individual learner.
     """
     user_id: str
-    concept_scores: dict[str, float] = field(default_factory=dict)
-    attempts: dict[str, int] = field(default_factory=dict)
-    errors: dict[str, list[str]] = field(default_factory=dict)
-    score_history: dict[str, list[float]] = field(default_factory=dict)
-    last_updated: dict[str, float] = field(default_factory=dict)
-    evidence_history: list[dict[str, Any]] = field(default_factory=list)
-    gap_inferences: dict[str, dict[str, Any]] = field(default_factory=dict)
+    concept_scores: dict[str, float] = field(default_factory=dict)       # Latest observed attempt score per concept (Tier 1)
+    attempts: dict[str, int] = field(default_factory=dict)               # Total attempt counts per concept (Tier 2)
+    errors: dict[str, list[str]] = field(default_factory=dict)           # Recorded error representations per concept (Tier 2)
+    score_history: dict[str, list[float]] = field(default_factory=dict)  # Chronological attempt scores per concept (Tier 2)
+    last_updated: dict[str, float] = field(default_factory=dict)         # Timestamps of latest attempt per concept
+    evidence_history: list[dict[str, Any]] = field(default_factory=list) # Immutable chronological array of LearnerEvidence dicts (Tier 2)
+    gap_inferences: dict[str, dict[str, Any]] = field(default_factory=dict) # Inferred conceptual gap/trend states (Tier 3)
 
     def record_attempt(self, topic: str, score: float, wrong_questions: list[str]) -> None:
         """Record the outcome of a quiz attempt, updating history and timestamps."""
@@ -135,18 +139,19 @@ class LearnerState:
 @dataclass
 class LearnerContext:
     """
-    Domain-level summary snapshot representing the learner's cognitive state,
-    used to bridge M2 evidence to M4 (API), M5 (AI Guidance), and UI dashboards.
+    [TIER 3: INFERRED LEARNER STATE SNAPSHOT]
+    Structured cognitive state snapshot bridging M2 evidence to M4 (API Gateway),
+    M5 (AI Guidance), and M1 (Learner Dashboards).
     """
     user_id: str
-    concept_mastery: dict[str, float] = field(default_factory=dict)
-    concept_scores: dict[str, float] = field(default_factory=dict)
-    attempts: dict[str, int] = field(default_factory=dict)
-    errors: dict[str, list[str]] = field(default_factory=dict)
-    score_history: dict[str, list[float]] = field(default_factory=dict)
-    gap_inferences: dict[str, dict[str, Any]] = field(default_factory=dict)
+    concept_mastery: dict[str, float] = field(default_factory=dict)      # Inferred continuous mastery [0.0, 1.0] (Tier 3)
+    concept_scores: dict[str, float] = field(default_factory=dict)       # Latest attempt score (Tier 1)
+    attempts: dict[str, int] = field(default_factory=dict)               # Attempt counts (Tier 2)
+    errors: dict[str, list[str]] = field(default_factory=dict)           # Error counts/items (Tier 2)
+    score_history: dict[str, list[float]] = field(default_factory=dict)  # Score trajectories (Tier 2)
+    gap_inferences: dict[str, dict[str, Any]] = field(default_factory=dict) # Gap inferences & trends (Tier 3)
     current_concept: Optional[str] = None
-    recommendation: Optional[AdaptiveRecommendation] = None
+    recommendation: Optional[AdaptiveRecommendation] = None              # Next pedagogical action (Tier 4)
 
     def to_dict(self) -> dict[str, Any]:
         rec_dict = self.recommendation.to_dict() if self.recommendation else None

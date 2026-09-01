@@ -38,6 +38,8 @@ from .repository import (
     JSONFileLearnerRepository,
     JSONStore,
     LearnerRepository,
+    PersistenceError,
+    StorageUnavailableError,
     SupabaseLearnerRepository,
 )
 
@@ -59,9 +61,11 @@ __all__ = [
     "LearnerState",
     "MASTERY_THRESHOLD",
     "MVP_ACTIVITIES",
+    "PersistenceError",
     "Question",
     "QuizResult",
     "QuizSubmission",
+    "StorageUnavailableError",
     "SupabaseLearnerRepository",
     "evaluate_conceptual_response",
     "evaluate_quantum_prediction",

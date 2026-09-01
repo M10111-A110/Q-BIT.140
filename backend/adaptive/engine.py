@@ -24,9 +24,11 @@ ERROR_STREAK_LIMIT: int = 2     # Consecutive errors triggering targeted review
 class LearnerModel:
     """
     Cognitive mastery model and adaptive decision engine.
-    Ties together concept prerequisite dependencies, diagnostic evidence,
-    historical improvement, error penalties, deterministic trajectory trend analysis,
-    and prerequisite-aware adaptive routing.
+    Implements a strict 4-tier separation:
+      1. Observed Performance (LearnerEvidence from latest attempt)
+      2. Accumulated Evidence (evidence_history, score trajectories, attempts)
+      3. Inferred Learner State (continuous mastery scores, calibrated GapInferences)
+      4. Adaptive Decisions (explainable, deterministic next pedagogical actions)
     """
 
     def __init__(
@@ -39,6 +41,7 @@ class LearnerModel:
 
     def compute_mastery(self, topic: str, state: LearnerState) -> float:
         """
+        [TIER 3: INFERRED CONTINUOUS MASTERY]
         Compute transparent mastery score for a topic given learner history:
           mastery = diagnostic_score + improvement_bonus - error_penalty
         Clamped within [0.0, 1.0] and rounded to 3 decimal places.
@@ -63,6 +66,7 @@ class LearnerModel:
         state: LearnerState,
     ) -> Optional[str]:
         """
+        [TIER 3: PREREQUISITE BOTTLENECK INFERENCE]
         Traverse concept dependencies (via concept DAG or registered activities)
         to find the earliest unsatisfied prerequisite with active errors or low mastery.
         Returns the canonical concept ID of the unmastered prerequisite, or None.
@@ -100,6 +104,7 @@ class LearnerModel:
 
     def recommend_next(self, topic: str, state: LearnerState) -> AdaptiveRecommendation:
         """
+        [TIER 4: GENERAL TOPIC ROUTING]
         Determine the next pedagogical recommendation for the learner given their state.
         Evaluation order:
           1. Prerequisite mastery check
@@ -170,9 +175,11 @@ class LearnerModel:
         state: LearnerState,
     ) -> AdaptiveRecommendation:
         """
-        Ingest an empirical LearnerEvidence observation, accumulate historical evidence,
-        derive calibrated gap inferences with trajectory trend analysis, and return
-        a deterministic adaptive recommendation.
+        Closed evidence-driven loop executing the 4-tier semantic flow:
+          Tier 1: Ingest empirical LearnerEvidence (Observed Performance of latest attempt)
+          Tier 2: Accumulate into persistent LearnerState (history trajectories)
+          Tier 3: Derive deterministic GapInference (Inferred cognitive state without false certainty)
+          Tier 4: Return explainable AdaptiveRecommendation (Next pedagogical action)
         """
         if isinstance(evidence, dict):
             evidence = LearnerEvidence.from_dict(evidence)
@@ -180,7 +187,10 @@ class LearnerModel:
         canonical_concept = resolve_concept_id(evidence.concept_id)
         display_name = get_concept_display_name(canonical_concept)
 
-        # 1. Append to evidence history
+        # ===================================================================
+        # TIER 2: ACCUMULATED EVIDENCE UPDATE
+        # ===================================================================
+        # 1. Append structured empirical observation to immutable history
         state.evidence_history.append(evidence.to_dict())
 
         # 2. Update basic state counters
@@ -196,11 +206,13 @@ class LearnerModel:
             err_repr = str(evidence.learner_response)
             state.errors.setdefault(display_name, []).append(err_repr)
         else:
-            # If successful after prior errors, clear active error list for this concept
+            # If successful after prior errors, clear active unresolved error list for this concept
             if display_name in state.errors and len(state.errors[display_name]) > 0:
                 state.errors[display_name] = []
 
-        # 4. Deterministic Gap Inference & Trend Classification
+        # ===================================================================
+        # TIER 3: DETERMINISTIC GAP INFERENCE & TRAJECTORY CLASSIFICATION
+        # ===================================================================
         concept_evidence = [
             e for e in state.evidence_history
             if resolve_concept_id(e.get("concept_id", "")) == canonical_concept
@@ -218,17 +230,20 @@ class LearnerModel:
             trend = "stable_mastery"
             desc = f"Evidence demonstrates consistent understanding of {display_name} across multiple attempts."
         elif len(recent_errors) == 0 and len(recent_successes) >= 1:
+            # 1 initial success -> observed mastery
             confidence = 0.0
             status = "mastered"
             trend = "mastered"
             desc = f"Evidence demonstrates consistent understanding of {display_name}."
         elif evidence.is_correct and len(concept_evidence) >= 2 and not concept_evidence[-2].get("is_correct", False):
+            # Success after error -> post-intervention improvement
             confidence = 0.15
             status = "improving"
             trend = "improving"
             desc = f"Evidence indicates post-intervention improvement in {display_name}."
         elif len(recent_errors) == 1:
-            confidence = 0.35  # Low confidence: single error is not proof of misconception
+            # Single error -> low confidence, no false certainty of misconception
+            confidence = 0.35
             status = "observing"
             trend = "preliminary_observation"
             desc = f"Evidence is consistent with possible difficulty in {display_name} (preliminary observation from 1 incorrect attempt)."
@@ -251,7 +266,9 @@ class LearnerModel:
         )
         state.gap_inferences[canonical_concept] = inference.to_dict()
 
-        # 5. Adaptive Routing Selection
+        # ===================================================================
+        # TIER 4: DETERMINISTIC ADAPTIVE DECISION
+        # ===================================================================
         if evidence.activity_id in MVP_ACTIVITIES:
             activity = get_activity(evidence.activity_id)
 
@@ -333,6 +350,7 @@ class LearnerModel:
         current_topic: Optional[str] = None,
     ) -> LearnerContext:
         """
+        [TIER 3: DOMAIN-LEVEL COGNITIVE STATE SNAPSHOT]
         Build a complete LearnerContext domain snapshot summarizing mastery,
         attempts, errors, gap inferences, and current recommendation.
         """

@@ -24,6 +24,7 @@ def _validate_json_safe(obj: Any, field_name: str = "") -> None:
 @dataclass
 class LearnerEvidence:
     """
+    [TIER 1: OBSERVED PERFORMANCE]
     Structured domain representation of an empirical observation produced
     during a learner activity (e.g. quantum prediction or conceptual task).
 
@@ -119,9 +120,10 @@ class LearnerEvidence:
 @dataclass
 class GapInference:
     """
-    Inference derived by M2 from accumulated evidence.
-    Represents patterns consistent with possible conceptual difficulty,
-    calibrated with an explicit deterministic confidence level.
+    [TIER 3: INFERRED LEARNER STATE]
+    Inference derived deterministically by M2 from accumulated historical evidence.
+    Represents patterns consistent with possible conceptual difficulty or mastery,
+    calibrated with an explicit deterministic confidence level without false certainty.
     """
     concept_id: str
     confidence: float  # 0.0 (unassessed/no gap) to 1.0 (high confidence gap)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.ai import LLMProvider, ask_question, explain_experiment
 
@@ -23,12 +23,19 @@ def handle_ai_ask(
     """
     Answer a learner's conceptual quantum question grounded strictly in curriculum knowledge.
     """
-    answer = ask_question(
-        question=req.question,
-        learner_context=req.learner_context,
-        concept_id=req.concept_id,
-        provider=provider,
-    )
+    try:
+        answer = ask_question(
+            question=req.question,
+            learner_context=req.learner_context,
+            concept_id=req.concept_id,
+            provider=provider,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"AI guidance service is currently unavailable: {exc}",
+        ) from exc
+
     return AskResponse(
         question=req.question,
         answer=answer,
@@ -45,14 +52,20 @@ def handle_explain_experiment(
     Generate an AI explanation of an empirical experiment attempt, explaining the relationship
     between the learner's prediction, the verified quantum result, and M2's adaptive decision.
     """
-    explanation = explain_experiment(
-        learner_response=req.learner_response,
-        verified_result=req.verified_result,
-        evidence=req.evidence,
-        adaptive_decision=req.adaptive_decision,
-        user_question=req.user_question,
-        provider=provider,
-    )
+    try:
+        explanation = explain_experiment(
+            learner_response=req.learner_response,
+            verified_result=req.verified_result,
+            evidence=req.evidence,
+            adaptive_decision=req.adaptive_decision,
+            user_question=req.user_question,
+            provider=provider,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"AI guidance service is currently unavailable: {exc}",
+        ) from exc
 
     return ExplainExperimentResponse(
         explanation=explanation,

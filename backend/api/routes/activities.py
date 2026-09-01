@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from backend.adaptive import (
     LearnerModel,
     LearnerRepository,
+    PersistenceError,
     evaluate_conceptual_response,
     evaluate_quantum_prediction,
     get_activity,
@@ -77,11 +78,13 @@ def submit_activity_attempt(
     """
     Process a learner activity attempt through the complete vertical slice:
       1. Resolve activity definition
-      2. If quantum prediction, execute REAL M3 quantum engine experiment
-      3. Construct empirical LearnerEvidence
-      4. Accumulate evidence into persistent LearnerState in repository
-      5. Compute M2 deterministic adaptive routing decision
-      6. Return structured response contract for UI and AI explanation
+      2. Load persistent learner state from repository (raises 503 on persistence failure)
+      3. If quantum prediction, execute REAL M3 quantum engine experiment (raises 500 on quantum failure)
+      4. Construct empirical LearnerEvidence
+      5. Accumulate evidence into persistent LearnerState in repository
+      6. Compute M2 deterministic adaptive routing decision
+      7. Persist updated state (raises 503 on persistence failure)
+      8. Return structured response contract for UI and AI explanation
     """
     try:
         activity = get_activity(activity_id)
@@ -92,7 +95,14 @@ def submit_activity_attempt(
         )
 
     # 1. Load persistent learner state from repository
-    state = repo.get(req.learner_id)
+    try:
+        state = repo.get(req.learner_id)
+    except PersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Learner state persistence service is currently unavailable",
+        ) from exc
+
     prior_attempts = [
         e for e in state.evidence_history
         if e.get("activity_id") == activity_id
@@ -110,9 +120,15 @@ def submit_activity_attempt(
             )
         
         # Real M3 Quantum Engine Execution
-        experiment = QuantumExperiment(**activity.quantum_experiment)
-        sim_result = run_experiment(experiment)
-        verified_dict = sim_result.to_dict()
+        try:
+            experiment = QuantumExperiment(**activity.quantum_experiment)
+            sim_result = run_experiment(experiment)
+            verified_dict = sim_result.to_dict()
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Quantum execution engine failed: {exc}",
+            ) from exc
 
         evidence = evaluate_quantum_prediction(
             learner_id=req.learner_id,
@@ -136,8 +152,14 @@ def submit_activity_attempt(
     # 3. M2 Ingestion & State Accumulation
     decision = model.record_evidence(evidence, state)
 
-    # 4. Save updated state back to repository
-    repo.save(state)
+    # 4. Save updated state back to repository (do not pretend save succeeded on error)
+    try:
+        repo.save(state)
+    except PersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to persist updated learner state to storage",
+        ) from exc
 
     # 5. Return complete response contract
     return SubmissionResponse(

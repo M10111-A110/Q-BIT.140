@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
@@ -16,8 +17,8 @@ class LLMProvider(ABC):
 
 class MockLLMProvider(LLMProvider):
     """
-    Deterministic, offline LLM provider for automated testing and standalone execution.
-    Inspects message content to generate structured, curriculum-grounded KaTeX markdown
+    Deterministic, offline mock provider for automated testing and standalone execution.
+    Inspects structured message content to generate curriculum-grounded KaTeX markdown
     without requiring external network calls or API keys.
     """
 
@@ -32,17 +33,39 @@ class MockLLMProvider(LLMProvider):
         return self._generate_qa_explanation(user_msg)
 
     def _generate_experiment_explanation(self, user_msg: str) -> str:
+        # Extract structured evidence items from prompt if available
+        pred_match = re.search(r"Learner Predicted State / Response:\s*([^\n]+)", user_msg)
+        target_match = re.search(r"Theoretical Target State:\s*([^\n]+)", user_msg)
+        most_likely_match = re.search(r"Empirical Most-Likely Measured State:\s*([^\n]+)", user_msg)
+        action_match = re.search(r"\* Action:\s*([^\n]+)", user_msg)
+        reason_match = re.search(r"\* Rationale:\s*([^\n]+)", user_msg)
+
+        pred_state = pred_match.group(1).strip() if pred_match else "N/A"
+        target_state = target_match.group(1).strip() if target_match else "N/A"
+        most_likely = most_likely_match.group(1).strip() if most_likely_match else "N/A"
+        action = action_match.group(1).strip() if action_match else "advance"
+        reason = reason_match.group(1).strip() if reason_match else "Continuing learning sequence."
+
+        is_match = (pred_state == most_likely) and (most_likely != "N/A")
+
+        outcome_analysis = (
+            f"Your prediction of state $|{pred_state}\\rangle$ correctly matched the empirical simulation outcome $|{most_likely}\\rangle$."
+            if is_match else
+            f"Your prediction was $|{pred_state}\\rangle$, while the empirical simulation resulted in target state $|{most_likely}\\rangle$."
+        )
+
         return (
-            "### Quantum Execution Analysis\n\n"
-            "- **Observation**: The verified Qiskit simulation executed Grover's Algorithm.\n"
-            "- **Mechanism**: The phase oracle flipped the sign of the marked target state ($O|w\\rangle = -|w\\rangle$), "
-            "and the diffusion operator ($D = 2|s\\rangle\\langle s| - I$) performed inversion-about-the-mean, "
-            "amplifying the target state's measurement amplitude.\n"
-            "- **Measurement Probability**: In a quantum circuit, measurement probabilities follow Born's rule: "
-            "$P(x) = |\\alpha_x|^2$. Finite-shot sampling produces empirical counts approximating this distribution.\n\n"
-            "### Adaptive Learning Path\n\n"
-            "The adaptive learner model (M2) evaluated the accumulated evidence and determined the next recommended activity. "
-            "Follow the recommended activity to reinforce foundational prerequisites before moving to advanced multi-qubit search."
+            f"### Quantum Execution Analysis\n\n"
+            f"- **Prediction vs Outcome**: {outcome_analysis}\n"
+            f"- **Target State**: Theoretical target is $|{target_state}\\rangle$.\n"
+            f"- **Mechanism**: The phase oracle flipped the sign of the marked target state ($O|w\\rangle = -|w\\rangle$), "
+            f"and the diffusion operator ($D = 2|s\\rangle\\langle s| - I$) performed inversion-about-the-mean, "
+            f"amplifying the target state amplitude.\n"
+            f"- **Measurement Probability**: Measurement probabilities follow Born's rule: "
+            f"$P(x) = |\\alpha_x|^2$. Finite-shot sampling produces counts reflecting this distribution.\n\n"
+            f"### Adaptive Learning Path\n\n"
+            f"- **Action**: `{action}`\n"
+            f"- **Pedagogical Rationale**: {reason}"
         )
 
     def _generate_qa_explanation(self, user_msg: str) -> str:
@@ -78,7 +101,8 @@ class MockLLMProvider(LLMProvider):
         return (
             "### Q-BIT AI Guidance\n\n"
             "Grounded explanation based on curriculum knowledge:\n"
-            "Quantum algorithms utilize superposition, unitary phase operations, and constructive interference to amplify target solution amplitudes prior to measurement."
+            "Quantum algorithms utilize superposition, unitary phase operations ($U|\\psi\\rangle$), "
+            "and constructive interference to amplify target solution amplitudes prior to measurement."
         )
 
 

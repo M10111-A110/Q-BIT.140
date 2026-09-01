@@ -8,6 +8,10 @@ You help learners understand Grover's Algorithm and its prerequisites (linear al
 
 Rules:
 - Base your answers strictly on the CURRICULUM CONTEXT and VERIFIED EXPERIMENT EVIDENCE provided below.
+- Explicitly distinguish between:
+  1. The learner's predicted state / choice.
+  2. The theoretical / target state.
+  3. The empirical most-likely measured state from simulation counts.
 - Never invent or alter quantum execution counts, target states, or measured probabilities.
 - Never override or change the adaptive decision made by the learner model (M2).
 - Distinguish observed empirical simulation results from ideal theoretical calculations.
@@ -48,17 +52,42 @@ def build_experiment_explanation_prompt(
     curriculum_context: str,
     user_question: Optional[str] = None,
 ) -> list[dict[str, str]]:
-    """Build messages list for explaining an empirical quantum experiment attempt."""
+    """
+    Build messages list for explaining an empirical quantum experiment attempt.
+    Explicitly structures the 3 distinct states:
+      1. Learner Predicted State / Response
+      2. Theoretical Target State
+      3. Empirical Most-Likely Measured State
+    """
     user_q_section = f"\nLEARNER ADDITIONAL QUESTION:\n{user_question}\n" if user_question else ""
+
+    target_state = verified_result.get("target_state", "N/A") if verified_result else "N/A"
+    most_likely_state = verified_result.get("most_likely_state", "N/A") if verified_result else "N/A"
+    target_prob = verified_result.get("target_probability", "N/A") if verified_result else "N/A"
+    counts = verified_result.get("counts", {}) if verified_result else "N/A"
+    shots = verified_result.get("shots", "N/A") if verified_result else "N/A"
+    circuit_info = verified_result.get("circuit", {}) if verified_result else "N/A"
+
+    is_correct = evidence.get("is_correct", False)
+    outcome_str = "MATCH (Correct Prediction)" if is_correct else "MISMATCH (Incorrect Prediction)"
 
     user_content = f"""CURRICULUM CONTEXT:
 {curriculum_context}
 
 VERIFIED EXPERIMENT EVIDENCE:
-- Learner Prediction / Response: {learner_response}
-- Verified Simulation Result: {json.dumps(verified_result, indent=2) if verified_result else "N/A (Conceptual task)"}
-- Evaluation Details: {json.dumps(evidence.get('evaluation_details', {}), indent=2)}
-- Adaptive Decision from M2: {json.dumps(adaptive_decision, indent=2)}
+- Learner Predicted State / Response: {learner_response}
+- Theoretical Target State: {target_state}
+- Empirical Most-Likely Measured State: {most_likely_state}
+- Target State Probability: {target_prob}
+- Empirical Measurement Counts: {json.dumps(counts)}
+- Total Shots Sampled: {shots}
+- Circuit Metadata: {json.dumps(circuit_info)}
+- Empirical Evaluation Outcome: {outcome_str}
+- Adaptive Recommendation from M2:
+  * Action: {adaptive_decision.get('action', 'N/A')}
+  * Target: {adaptive_decision.get('target', 'N/A')}
+  * Rationale: {adaptive_decision.get('reason', 'N/A')}
+  * Concept: {adaptive_decision.get('concept_id', 'N/A')}
 {user_q_section}
 Explain the relationship between the learner's prediction, the verified quantum result (oracle marking and amplitude amplification), and why M2 recommended this adaptive decision. Format all equations using KaTeX ($...$ or $$...$$)."""
 
