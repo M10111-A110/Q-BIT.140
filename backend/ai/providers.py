@@ -80,8 +80,8 @@ class MockLLMProvider(LLMProvider):
             f"- **Mechanism**: The phase oracle flipped the sign of the marked target state ($O|w\\rangle = -|w\\rangle$), "
             f"and the diffusion operator ($D = 2|s\\rangle\\langle s| - I$) performed inversion-about-the-mean, "
             f"amplifying the target state amplitude.\n"
-            f"- **Measurement Probability**: Measurement probabilities follow Born's rule: "
-            f"$P(x) = |\\alpha_x|^2$. Finite-shot sampling produces counts reflecting this distribution.\n\n"
+            f"- **Amplitude vs Probability**: Measurement probabilities follow Born's rule: "
+            f"$P(x) = |\\alpha_x|^2$. In this MVP's specific 2-qubit diagnostic scenario, a target state amplitude of $\\alpha \\approx 0.968$ yields a theoretical measurement probability of $|0.968|^2 \\approx 0.937$ ($93.7\\%$). Finite-shot sampling ($1024$ shots on Qiskit Aer) produces empirical counts reflecting this distribution.\n\n"
             f"### Adaptive Learning Path\n\n"
             f"- **Action**: `{action}`\n"
             f"- **Pedagogical Rationale**: {reason}"
@@ -94,41 +94,8 @@ class MockLLMProvider(LLMProvider):
         question_text = q_match.group(1).strip() if q_match else user_msg.strip()
         lower_q = question_text.lower()
 
-        # Intent a: Superposition / Qubit
-        if any(k in lower_q for k in ["superposition", "qubit", "hadamard", "basis state", "|+⟩", "|-⟩", "bloch"]):
-            return (
-                "### Quantum Superposition\n\n"
-                "A qubit can exist in a superposition state $|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle$, "
-                "where $\\alpha, \\beta \\in \\mathbb{C}$ and $|\\alpha|^2 + |\\beta|^2 = 1$.\n\n"
-                "Applying a Hadamard gate $H$ to $|0\\rangle$ yields:\n"
-                "$$H|0\\rangle = \\frac{|0\\rangle + |1\\rangle}{\\sqrt{2}}$$\n"
-                "This produces equal measurement probabilities of $50\\%$ ($P(0) = P(1) = 0.5$)."
-            )
-
-        # Intent b: Measurement / Probability / Born Rule
-        elif any(k in lower_q for k in ["measurement", "probability", "born", "collapse", "shots", "distribution"]):
-            return (
-                "### Quantum Measurement & Probability\n\n"
-                "In quantum mechanics, measurement collapses the wavefunction according to the state's complex amplitudes. "
-                "For a state $|\\psi\\rangle = \\sum_x \\alpha_x |x\\rangle$, the probability of observing outcome $x$ is given by Born's rule: "
-                "$$P(x) = |\\alpha_x|^2$$\n"
-                "Counts from a finite number of shots approximate this underlying probability distribution."
-            )
-
-        # Intent c: Grover / Oracle / Diffusion
-        elif any(k in lower_q for k in ["grover", "oracle", "diffusion", "amplification", "inversion"]):
-            return (
-                "### Grover's Algorithm Overview\n\n"
-                "Grover's algorithm searches an unstructured database of $N = 2^n$ items in $\\mathcal{O}(\\sqrt{N})$ oracle queries.\n\n"
-                "**Core Steps**:\n"
-                "1. Initialize qubits in equal superposition: $|s\\rangle = H^{\\otimes n}|0\\rangle^{\\otimes n} = \\frac{1}{\\sqrt{N}}\\sum_{x=0}^{N-1}|x\\rangle$.\n"
-                "2. Apply Phase Oracle: $O|x\\rangle = (-1)^{f(x)}|x\\rangle$.\n"
-                "3. Apply Diffusion Operator: $D = 2|s\\rangle\\langle s| - I$.\n"
-                "4. Measure the computational basis state after $\\approx \\frac{\\pi}{4}\\sqrt{N}$ iterations."
-            )
-
-        # Intent d: Prediction Mismatch / Verified Outcome
-        elif any(k in lower_q for k in ["prediction", "differ", "mismatch", "incorrect", "wrong", "verified result", "actual result", "outcome"]):
+        # Intent 1: Prediction Mismatch / Verified Outcome
+        if any(k in lower_q for k in ["prediction", "differ", "mismatch", "incorrect", "wrong", "verified result", "actual result", "outcome"]):
             return (
                 "### Prediction vs Quantum Execution\n\n"
                 "A prediction mismatch occurs when the learner's hypothesized basis state does not match "
@@ -138,7 +105,7 @@ class MockLLMProvider(LLMProvider):
                 "If an incorrect state was predicted, the empirical 1024-shot simulation reflects the actual amplified target state rather than the guess."
             )
 
-        # Intent e: Adaptive Recommendation / "Why This Next?"
+        # Intent 2: Adaptive Recommendation / "Why This Next?"
         elif any(k in lower_q for k in ["next", "recommend", "why this", "selected", "activity", "remediation", "advance", "routing"]):
             return (
                 "### Adaptive Learning Path (\"Why This Next?\")\n\n"
@@ -148,7 +115,7 @@ class MockLLMProvider(LLMProvider):
                 "- **Mastery / Recovery**: Triggers `advance` to progress along the curriculum DAG once understanding is demonstrated."
             )
 
-        # Intent f: Learner State / Progress
+        # Intent 3: Learner State / Progress
         elif any(k in lower_q for k in ["learner state", "progress", "mastery", "score", "trajectory", "gap", "inference"]):
             return (
                 "### Learner State & Cognitive Tracking\n\n"
@@ -159,11 +126,65 @@ class MockLLMProvider(LLMProvider):
                 "- **Tier 4 (Pedagogical Action)**: Deterministic routing decisions grounded in evidence sufficiency."
             )
 
-        # Intent g: Honest fallback for unknown questions
+        # Intent 4: Qubit Concept (explicitly distinct from Superposition)
+        elif ("qubit" in lower_q or "quantum bit" in lower_q) and ("superposition" not in lower_q):
+            return (
+                "### Understanding the Qubit\n\n"
+                "A **qubit** (quantum bit) is the fundamental unit of quantum information, analogous to a classical bit (0 or 1):\n\n"
+                "- **State Representation**: A qubit state $|\\psi\\rangle$ is represented as a linear combination of orthonormal basis states:\n"
+                "$$|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle$$\n"
+                "- **Probability Amplitudes**: $\\alpha, \\beta \\in \\mathbb{C}$ are complex probability amplitudes normalized such that:\n"
+                "$$|\\alpha|^2 + |\\beta|^2 = 1$$\n"
+                "- **Measurement & Probabilities**: Measuring the qubit collapses the state, yielding outcome $0$ with probability $P(0) = |\\alpha|^2$ or outcome $1$ with probability $P(1) = |\\beta|^2$.\n"
+                "- **Key Distinction**: While superposition allows simultaneous amplitude weights before observation, measurement always produces a single classical outcome. A qubit is not simply 'a bit that is both 0 and 1 at the same time'."
+            )
+
+        # Intent 5: Quantum Superposition
+        elif any(k in lower_q for k in ["superposition", "hadamard", "basis state", "|+⟩", "|-⟩", "bloch"]):
+            return (
+                "### Quantum Superposition\n\n"
+                "**Superposition** is the physical principle that allows a quantum state to exist as a linear combination of basis states simultaneously:\n\n"
+                "$$|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle$$\n\n"
+                "- **Equal Superposition via Hadamard Gate**: Applying an $H$ gate to basis state $|0\\rangle$ yields:\n"
+                "$$H|0\\rangle = \\frac{|0\\rangle + |1\\rangle}{\\sqrt{2}}$$\n"
+                "- **Probabilistic Symmetry**: Both basis states have equal amplitude $\\frac{1}{\\sqrt{2}}$, yielding equal measurement probabilities:\n"
+                "$$P(0) = \\left|\\frac{1}{\\sqrt{2}}\\right|^2 = 0.5 \\quad (50\\%), \\quad P(1) = \\left|\\frac{1}{\\sqrt{2}}\\right|^2 = 0.5 \\quad (50\\%)$$\n"
+                "- **Phase & Interference**: Unlike classical probabilities, amplitudes can have relative phases (e.g. negative signs) that enable constructive and destructive quantum interference."
+            )
+
+        # Intent 6: Measurement / Probability / Born Rule / Amplitude
+        elif any(k in lower_q for k in ["measurement", "probability", "born", "collapse", "shots", "distribution", "amplitude"]):
+            return (
+                "### Quantum Measurement & Born's Rule\n\n"
+                "In quantum mechanics, quantum state amplitudes $\\alpha_x$ are complex numbers, "
+                "while measurement probabilities $P(x)$ represent physical observation frequencies:\n\n"
+                "**Born's Rule**:\n"
+                "$$P(x) = |\\alpha_x|^2$$\n\n"
+                "- **Amplitude vs Probability**: In this MVP's specific 2-qubit diagnostic scenario, a target state amplitude of $\\alpha \\approx 0.968$ yields a theoretical measurement probability of:\n"
+                "$$P(10) = |0.968|^2 \\approx 0.937 \\quad (93.7\\%)$$\n"
+                "- **Wavefunction Collapse**: Measurement projects the continuous state vector into a single discrete computational basis state $|x\\rangle$.\n"
+                "- **Finite-Shot Sampling**: Empirical finite-shot executions (e.g. 1024 shots) produce sampled frequency counts that approximate $N_{\\text{shots}} \\times P(x)$, with empirical results depending on the executed circuit and sampling."
+            )
+
+        # Intent 7: Grover / Oracle / Diffusion
+        elif any(k in lower_q for k in ["grover", "oracle", "diffusion", "amplification", "inversion"]):
+            return (
+                "### Grover's Algorithm Overview\n\n"
+                "Grover's algorithm searches an unstructured database of $N = 2^n$ items in $\\mathcal{O}(\\sqrt{N})$ oracle queries.\n\n"
+                "**Core Steps**:\n"
+                "1. **Superposition Initialization**: $|s\\rangle = H^{\\otimes n}|0\\rangle^{\\otimes n} = \\frac{1}{\\sqrt{N}}\\sum_{x=0}^{N-1}|x\\rangle$.\n"
+                "2. **Phase Oracle**: Inverts the sign of the marked target state: $O|x\\rangle = (-1)^{f(x)}|x\\rangle$.\n"
+                "3. **Diffusion Operator**: Inverts amplitudes about the mean: $D = 2|s\\rangle\\langle s| - I$, amplifying the marked state amplitude.\n"
+                "4. **Measurement**: Collapses the quantum state according to Born's rule ($P(x) = |\\alpha_x|^2$). "
+                "In this MVP's specific 2-qubit diagnostic scenario ($|10\\rangle$ target with $\\alpha \\approx 0.968$), the theoretical success probability is $P(|10\\rangle) = |0.968|^2 \\approx 93.7\\%$. "
+                "Empirical outcomes from finite-shot execution (such as 1024 shots on Qiskit Aer) statistically sample this distribution and depend on the specific circuit executed rather than being universal across all Grover configurations."
+            )
+
+        # Intent 8: Honest fallback for unknown questions
         return (
             "### Q-BIT AI Guidance\n\n"
-            "I can explain quantum superposition, measurement probability, Grover's algorithm, experiment predictions, "
-            "adaptive recommendations, and your cognitive learner state. Please ask a question related to these topics."
+            "I can explain what a qubit is, quantum superposition, measurement probability (Born's rule), Grover's algorithm, "
+            "experiment predictions, adaptive recommendations, and your cognitive learner state. Please ask a question related to these topics."
         )
 
 

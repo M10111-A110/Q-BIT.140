@@ -41,37 +41,19 @@
         </div>
     </div>
 
-    <!-- TOPBAR ACHIEVEMENT CHIPS -->
-    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="topbarBadges">
-        <div class="chip" id="chipStreak" title="Current activity streak">
-            <span class="chip-icon">🔥</span>
-            <span class="chip-label">Streak</span>
-            <span class="chip-val flame" id="badgeStreak">1</span>
-        </div>
+    <!-- TOPBAR MASTERY BADGE -->
+    <div style="display: flex; align-items: center; gap: 8px;" id="topbarBadges">
         <div class="chip" id="chipMastery" title="Concepts mastered">
             <span class="chip-icon">🏆</span>
             <span class="chip-label">Mastery</span>
             <span class="chip-val green" id="badgeMastery">1/4</span>
         </div>
-        <div class="chip" id="chipPoints" title="Estimated quantum knowledge points">
-            <span class="chip-icon">⭐</span>
-            <span class="chip-label">Points</span>
-            <span class="chip-val gold" id="badgePoints">250</span>
-        </div>
-        <div class="chip" id="chipAccuracy" title="Overall prediction and quiz accuracy">
-            <span class="chip-icon">🎯</span>
-            <span class="chip-label">Accuracy</span>
-            <span class="chip-val" id="badgeAccuracy">100%</span>
-        </div>
     </div>
 
     <div class="header-right">
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">Learner ID:</span>
-            <input type="text" id="learnerIdInput" value="" placeholder="learner_..." style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; width: 140px;">
-        </div>
-        <button class="btn secondary" style="padding: 6px 10px; font-size: 11px;" onclick="handleResetSession()">🔄 Reset Session</button>
-        <button class="btn secondary" style="padding: 6px 10px; font-size: 11px;" onclick="openAskModal()">🤖 Ask AI</button>
+        <input type="hidden" id="learnerIdInput" value="">
+        <button class="btn secondary" style="padding: 6px 12px; font-size: 11px;" onclick="handleResetSession()">🔄 Reset Session</button>
+        <button class="btn secondary" style="padding: 6px 12px; font-size: 11px;" onclick="openAskModal()">🤖 Ask AI</button>
         <button class="profile-btn" id="profileOpenBtn" onclick="openProfileModal()" title="Learner Profile & Settings">QE</button>
     </div>
 </header>
@@ -100,7 +82,7 @@
         <!-- Circuit Studio -->
         <div class="circuit-studio">
             <div class="card-header">
-                <span class="card-title">Interactive Quantum Circuit Studio</span>
+                <span class="card-title">Interactive Quantum Circuit Studio (Visual Exploration)</span>
                 <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">
                     Tool: <strong id="activeToolDisplay" style="color: var(--cyan);">None</strong>
                 </span>
@@ -124,7 +106,7 @@
             <div class="wire-grid" id="circuitWireGrid"></div>
 
             <div class="gate-info-callout" id="gateInfoDisplay">
-                <span>💡 Click any tool gate to inspect its quantum operation or place it on the grid.</span>
+                <span>💡 Visual Circuit Explorer: Place gates on the grid to inspect quantum operations. Submissions execute the active activity circuit on Qiskit Aer (1024 shots).</span>
             </div>
         </div>
 
@@ -568,20 +550,64 @@
         }
     }
 
+    // Safe Lightweight Markdown Formatter for AI Guidance
+    function formatGroundedMarkdown(rawText) {
+        if (!rawText) return "";
+        // 1. Escape HTML special characters for XSS safety
+        const escaped = String(rawText)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+
+        // 2. Parse lines into structured semantic elements
+        const lines = escaped.split("\n");
+        let html = "";
+        let inList = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) {
+                if (inList) { html += "</ul>"; inList = false; }
+                continue;
+            }
+
+            if (line.startsWith("### ")) {
+                if (inList) { html += "</ul>"; inList = false; }
+                html += `<h4 class="ai-heading">${line.slice(4)}</h4>`;
+            } else if (line.startsWith("## ")) {
+                if (inList) { html += "</ul>"; inList = false; }
+                html += `<h3 class="ai-heading-large">${line.slice(3)}</h3>`;
+            } else if (line.startsWith("- ") || line.startsWith("* ")) {
+                if (!inList) { html += `<ul class="ai-list">`; inList = true; }
+                let item = line.slice(2)
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/`([^`]+)`/g, '<code class="ai-inline-code">$1</code>');
+                html += `<li>${item}</li>`;
+            } else if (/^\d+\.\s/.test(line)) {
+                if (inList) { html += "</ul>"; inList = false; }
+                let item = line.replace(/^\d+\.\s/, '')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/`([^`]+)`/g, '<code class="ai-inline-code">$1</code>');
+                html += `<div class="ai-ordered-item">${item}</div>`;
+            } else {
+                if (inList) { html += "</ul>"; inList = false; }
+                let para = line
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/`([^`]+)`/g, '<code class="ai-inline-code">$1</code>');
+                html += `<p class="ai-para">${para}</p>`;
+            }
+        }
+        if (inList) { html += "</ul>"; }
+        return html;
+    }
+
     // -------------------------------------------------------------------
-    // 4. Achievement Badges Updater (M2-driven)
+    // 4. Progress Updater (M2-driven)
     // -------------------------------------------------------------------
     function updateBadgeDisplays(learnerState = {}) {
         const metrics = computeBadgeMetrics(learnerState, activitiesList);
-        const streakEl = document.getElementById("badgeStreak");
         const masteryEl = document.getElementById("badgeMastery");
-        const pointsEl = document.getElementById("badgePoints");
-        const accEl = document.getElementById("badgeAccuracy");
-
-        if (streakEl) streakEl.textContent = metrics.streak;
         if (masteryEl) masteryEl.textContent = `${metrics.completedCount}/${metrics.totalCount}`;
-        if (pointsEl) pointsEl.textContent = metrics.points;
-        if (accEl) accEl.textContent = `${metrics.accuracyPct}%`;
     }
 
     // -------------------------------------------------------------------
@@ -771,24 +797,18 @@
         const inputEl = document.getElementById("learnerIdInput");
         if (inputEl) {
             inputEl.value = savedId;
-            inputEl.addEventListener("change", () => {
-                const manualId = inputEl.value.trim();
-                if (manualId) {
-                    try {
-                        localStorage.setItem("qbit_current_learner_id", manualId);
-                    } catch {}
-                    loadProfileOnBoot();
-                }
-            });
         }
     }
 
     window.handleResetSession = function() {
         const uuid = (typeof crypto !== "undefined" && crypto.randomUUID)
-            ? crypto.randomUUID().slice(0, 8)
+            ? crypto.randomUUID()
             : Math.random().toString(36).substring(2, 10);
         const newLearnerId = `learner_${uuid}`;
-        document.getElementById("learnerIdInput").value = newLearnerId;
+        const inputEl = document.getElementById("learnerIdInput");
+        if (inputEl) {
+            inputEl.value = newLearnerId;
+        }
         try {
             localStorage.setItem("qbit_current_learner_id", newLearnerId);
         } catch {}
@@ -1064,10 +1084,10 @@
         try {
             const exp = await explainExperiment(lastSubmitResult);
             const expBox = document.getElementById("aiExplanationText");
-            expBox.textContent = exp.explanation;
+            expBox.innerHTML = formatGroundedMarkdown(exp.explanation);
             renderMath(expBox);
         } catch (err) {
-            document.getElementById("aiExplanationText").textContent = `AI Guidance Notice: Grounded explanation is temporarily unavailable (${err.message}). Your verified quantum simulation result and adaptive progress remain safely recorded.`;
+            document.getElementById("aiExplanationText").innerHTML = `<p class="ai-para">AI Guidance Notice: Grounded explanation is temporarily unavailable (${err.message}). Your verified quantum simulation result and adaptive progress remain safely recorded.</p>`;
         } finally {
             btn.disabled = false; btn.textContent = "Explain My Result";
         }
@@ -1091,7 +1111,7 @@
             const res = await askConceptualQuestion(q, currentActivityData?.concept_id || null);
             const box = document.getElementById("askAnswerBox");
             box.style.display = "block";
-            box.textContent = res.answer;
+            box.innerHTML = formatGroundedMarkdown(res.answer);
             renderMath(box);
         } catch (err) {
             showError(`Question error: ${err.message}`);

@@ -240,10 +240,9 @@ def test_frontend_static_serving():
     # Hybrid visual enhancements
     assert '<canvas id="fx"></canvas>' in html
     assert 'class="atom"' in html
-    assert 'id="badgeStreak"' in html
+    # Topbar Mastery
+    assert 'id="chipMastery"' in html
     assert 'id="badgeMastery"' in html
-    assert 'id="badgePoints"' in html
-    assert 'id="badgeAccuracy"' in html
     # Profile modal & subviews
     assert 'id="profileModal"' in html
     assert 'id="profileView-menu"' in html
