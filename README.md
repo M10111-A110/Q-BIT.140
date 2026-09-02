@@ -36,7 +36,7 @@ Q-BIT.140 addresses this by using **Grover's 2-Qubit Algorithm** as a bounded, r
 2. **State Triad Separation**: Explicitly distinguishes **Learner Prediction** ($|01\rangle$) $\neq$ **Theoretical Target** ($|10\rangle$) $\neq$ **Empirical Measurement** ($|10\rangle$ at $93.8\%$).
 3. **Deterministic Evidence Semantics**: Every attempt produces an auditable `LearnerEvidence` record with a unique ID and sufficiency classification (`insufficient` $\rightarrow$ `sufficient_for_targeted_inference` $\rightarrow$ `sufficient_for_improvement_observation` $\rightarrow$ `sufficient_for_mastery`).
 4. **Deterministic Adaptive Modeling (M2)**: M2 is the sole decision authority. A single error triggers evidence gathering (`gather_evidence`); repeated errors escalate to prerequisite remediation (`targeted_remediation`).
-5. **Grounded AI Guidance (M5)**: AI explanations are strictly constrained by verified simulation counts and the M2 decision trace. M5 never fabricates results or makes adaptive decisions.
+5. **Grounded AI Guidance (M5)**: AI explanations are strictly constrained by verified simulation counts and the M2 decision trace. M5 enforces a hard boundary between curriculum theory, learner evidence, and actual quantum execution, never fabricating missing results or modifying M2 decisions.
 
 ---
 
@@ -88,7 +88,7 @@ Q-BIT.140 addresses this by using **Grover's 2-Qubit Algorithm** as a bounded, r
 - **M2 (Learner Model)**: Sole authority for cognitive state, evidence sufficiency, hypotheses, and pedagogical actions. Purely deterministic; zero LLM dependency.
 - **M3 (Quantum Engine)**: Sole authority for physical execution and measurement counts. **100% frozen.**
 - **M4 (Backend Gateway)**: Pure JSON serialization, strict input validation, transparent error handling (404/500/503).
-- **M5 (AI Guidance)**: Explanation-only layer grounded in M3 results and M2 traces.
+- **M5 (AI Guidance)**: Grounded explanation layer with strict evidence boundaries, distinguishing conceptual diagnostics from physical simulation counts. Full offline fallback with KaTeX.
 - **Persistence Layer**: Fail-safe repository preventing corrupted states or silent resets.
 
 ---
@@ -101,8 +101,8 @@ Q-BIT.140 addresses this by using **Grover's 2-Qubit Algorithm** as a bounded, r
 | **Backend API** | FastAPI / Pydantic / Uvicorn | High-performance asynchronous REST API gateway (M4) |
 | **Quantum Engine** | Qiskit 1.0+ / Qiskit Aer | Authoritative quantum circuit construction & 1024-shot simulation (M3) |
 | **Learner Engine** | Python 3.11+ / Dataclasses | Deterministic cognitive DAG, mastery modeling & decision engine (M2) |
-| **AI Guidance** | Python / Groq LLM API / MockLLM | Grounded curriculum explanation layer with offline fallback (M5) |
-| **Testing** | pytest / pytest-asyncio | 295 automated unit, integration, and regression tests |
+| **AI Guidance** | Python / Groq LLM API / MockLLM | Grounded curriculum explanation layer with offline KaTeX fallback (M5) |
+| **Testing** | pytest / pytest-asyncio / Playwright | 305 automated unit, integration, and regression tests |
 
 ---
 
@@ -147,21 +147,24 @@ http://127.0.0.1:8000/
 
 ## Running Automated Tests
 
-Run the complete test suite (295 tests):
+Run the complete test suite (305 tests):
 ```bash
 pytest -q
 ```
 
 Run specific test modules:
 ```bash
-# Quantum Engine tests
+# Quantum Engine tests (M3)
 pytest tests/quantum
 
-# Adaptive Learner & Provenance tests
+# Adaptive Learner & Provenance tests (M2)
 pytest tests/adaptive
 
-# API Contracts & Evaluator Journey tests
+# API Contracts & Evaluator Journey tests (M4)
 pytest tests/api
+
+# Grounded AI Guidance tests (M5)
+pytest tests/ai
 ```
 
 ---
