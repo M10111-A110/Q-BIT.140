@@ -28,7 +28,7 @@ This document provides an exhaustive, code-grounded forensic inspection of every
 - **Path**: `backend/quantum/registry.py`
 - **Module**: M3 (Quantum Engine)
 - **Role**: Algorithm registry mapping string keys to circuit builders.
-- **Data Structures**: `ALGORITHM_REGISTRY = {"grover_2q": build_grover_circuit}`.
+- **Data Structures**: `ALGORITHM_REGISTRY = {"grover_2q": build_grover_circuit, "grover": build_grover_circuit}`.
 - **Functions**: `get_algorithm(name: str) -> Callable`. Raises `ValueError` on unregistered algorithms.
 - **Test Coverage**: `tests/quantum/test_registry.py`.
 
@@ -100,12 +100,12 @@ This document provides an exhaustive, code-grounded forensic inspection of every
 - **Module**: M2 (Adaptive Engine)
 - **Role**: Catalog of interactive learner activities and curriculum sequencing metadata.
 - **Dataclasses**:
-  - `Activity`: `activity_id: str`, `concept_id: str`, `title: str`, `description: str`, `task_type: Literal["quantum_prediction", "conceptual_choice"]`, `prompt: str`, `options: dict[str, str] | None`, `expected_answer: str | None`, `quantum_experiment: dict[str, Any] | None`, `prerequisites: tuple[str, ...]`, `remediation_activity_id: str | None`, `next_activity_id: str | None`.
-- **Catalog (`MVP_ACTIVITIES`)**:
-  1. `act_grover_2q_predict`: Task type `quantum_prediction`. Target state `"10"`. Options: `{"00": "|00⟩", "01": "|01⟩", "10": "|10⟩", "11": "|11⟩"}`. Remediation: `act_diag_superposition`. Next: `act_diag_grover_eval`.
-  2. `act_diag_qubit`: Task type `conceptual_choice`. Prerequisite diagnostic for `quantum.qubit`.
-  3. `act_diag_superposition`: Task type `conceptual_choice`. Prerequisite diagnostic for `quantum.superposition`. Remediation: `act_diag_qubit`. Next: `act_grover_2q_predict`.
-  4. `act_diag_grover_eval`: Task type `conceptual_choice`. Post-experiment evaluation for `quantum.algorithm.grover_2q`.
+  - `Activity`: `activity_id: str`, `concept_id: str`, `title: str`, `description: str`, `task_type: str`, `prerequisites: list[str]`, `prompt: str`, `options: Optional[dict[str, str]]`, `expected_answer: Optional[str]`, `quantum_experiment: Optional[dict[str, Any]]`, `remediation_activity_id: Optional[str]`, `next_activity_id: Optional[str]`, `metadata: dict[str, Any]`.
+- **Active MVP Activity Registry (`MVP_ACTIVITIES`)**:
+  1. `act_grover_2q_predict`: Task type `quantum_prediction`. Target state `"10"`. Options: `{"00": "|00⟩", "01": "|01⟩", "10": "|10⟩", "11": "|11⟩"}`. Remediation: `act_measurement_prob_diagnostic`. Next: `act_grover_iteration_reasoning`.
+  2. `act_measurement_prob_diagnostic`: Task type `conceptual_choice`. Prerequisite diagnostic for `quantum.measurement`. Remediation: `act_superposition_remediation`. Next: `act_grover_2q_predict`.
+  3. `act_superposition_remediation`: Task type `conceptual_choice`. Prerequisite diagnostic for `quantum.superposition`. Remediation: `None`. Next: `act_measurement_prob_diagnostic`.
+  4. `act_grover_iteration_reasoning`: Task type `conceptual_choice`. Post-experiment evaluation for `grover.amplitude_amplification`. Remediation: `act_grover_2q_predict`. Next: `None`.
 - **Functions**: `get_activity(id)`, `list_activities()`, `get_activities_for_concept(concept_id)`.
 - **Test Coverage**: `tests/adaptive/test_activities.py`.
 
@@ -160,14 +160,16 @@ This document provides an exhaustive, code-grounded forensic inspection of every
 - **Role**: 4-Tier cognitive modeling and deterministic recommendation engine.
 - **Classes**:
   - `LearnerModel`: Implements curriculum DAG graph traversal, mastery calculation, prerequisite bottleneck detection, and pedagogical routing.
-- **Mastery Formula**:
-  $$\text{Mastery}(c) = \frac{1.0 + \sum_{i=0}^{k-1} w_i \cdot S_i}{2.0 + \sum_{i=0}^{k-1} w_i}, \quad w_i = \lambda^{k-1-i} \quad (\lambda = 0.85)$$
-- **Prerequisite Gate Rule**: Concept mastery is capped at the minimum mastery of its immediate prerequisites:
-  $$\text{Mastery}_{\text{gated}}(c) = \min\left(\text{Mastery}(c), \min_{p \in \text{Prereqs}(c)} \text{Mastery}(p)\right)$$
+- **Actual Implemented Mastery Formula**:
+  $$\text{Mastery}(c) = \text{clamp}_{[0, 1]}(\text{diag\_score} + \text{improvement\_bonus} - \text{error\_penalty})$$
+  where:
+  - $\text{improvement\_bonus} = \max(0.0, \text{history}[-1] - \text{history}[-2]) \times 0.2$ (when $\text{len(history)} \ge 2$)
+  - $\text{error\_penalty} = \min(\text{error\_count} \times 0.05, 0.3)$
+- **Prerequisite Bottleneck Rule**: Checks active errors on prerequisite concepts first, then checks if prerequisite mastery is below threshold ($0.6$).
 - **Decision Rules**:
   - Correct Attempt $\rightarrow$ `action="advance"`, `target=activity.next_activity_id`.
   - Single Error $\rightarrow$ `action="gather_evidence"`, `target=activity.activity_id` (preliminary observation, no premature remediation).
-  - Repeated Errors ($\ge 2$) $\rightarrow$ `action="targeted_remediation"`, routes to prerequisite diagnostic (e.g. `act_diag_superposition`).
+  - Repeated Errors ($\ge 2$) $\rightarrow$ `action="targeted_remediation"`, routes to configured remediation activity (e.g. `act_measurement_prob_diagnostic`).
 - **Test Coverage**: `tests/adaptive/test_routing.py`, `tests/adaptive/test_mastery.py`, `tests/adaptive/test_vertical_slice.py`.
 
 ---
@@ -197,7 +199,7 @@ This document provides an exhaustive, code-grounded forensic inspection of every
 - **Role**: LLM provider abstractions with production Groq integration and deterministic offline MockLLM engine.
 - **Classes**:
   - `LLMProvider` (ABC): `generate(messages: list[dict], model: Optional[str]) -> str`.
-  - `MockLLMProvider`: 100% offline, deterministic intent matcher producing mathematically rigorous KaTeX explanations.
+  - `MockLLMProvider`: 100% offline, deterministic engine parsing structured evidence markers for quantum predictions, conceptual choices, and general Q&A with KaTeX formulas.
   - `GroqLLMProvider`: Production cloud LLM provider calling Groq completions API.
   - `get_default_provider()`: Factory returning `GroqLLMProvider` if `GROQ_API_KEY` exists, else falls back cleanly to `MockLLMProvider`.
 - **Test Coverage**: `tests/ai/test_providers.py`, `tests/ai/test_m5_grounded_guidance.py`.
@@ -260,14 +262,6 @@ This document provides an exhaustive, code-grounded forensic inspection of every
 - **Path**: `frontend/index.html`
 - **Module**: M1 (Frontend UI)
 - **Role**: Single-Page Application containing State Triad, Circuit Studio, Causal Timeline, State Inspector, and Tutor Chat.
-- **Structure**:
-  - Particle background canvas (`#fx`).
-  - Top Navigation & Concept Badge tracker.
-  - Interactive State Triad cards (Learner Prediction vs Theoretical Target vs Physical Result).
-  - Grover 2-Qubit Visualizer with interactive probability bars.
-  - Circuit Studio canvas with drag-and-drop / click-to-place quantum gate palette.
-  - "Why This Next?" adaptive decision rationale callout.
-  - AI Guidance panel with LaTeX rendering via KaTeX.
 - **Test Coverage**: `tests/api/test_frontend_adapter_and_binding.py`, `tests/api/test_m1_m6_integration.py`.
 
 ## 5.2 `frontend/css/styles.css`
@@ -285,12 +279,7 @@ This document provides an exhaustive, code-grounded forensic inspection of every
 - **Path**: `frontend/js/adapter.js`
 - **Module**: M6 (Visualization)
 - **Role**: Client-side data presentation adapter.
-- **Exports**:
-  - `formatStateLabel(str)`: Formats `"10"` into Dirac notation `|10⟩`.
-  - `formatPercentage(num)`: Formats `0.938` into `"93.8%"`.
-  - `formatSufficiencyLabel(str)`: Translates sufficiency enums into human labels.
-  - `formatTriggerLabel(str)`: Translates adaptive trigger keys into pedagogical descriptions.
-  - `normalizeSubmissionResponse(json)`: Builds structured presentation view model for State Triad, probability bars, and timeline.
+- **Exports**: `formatStateLabel()`, `formatPercentage()`, `formatSufficiencyLabel()`, `formatTriggerLabel()`, `normalizeSubmissionResponse()`.
 - **Test Coverage**: `tests/api/test_m6_adapter.py`, `tests/api/test_frontend_adapter_and_binding.py`.
 
 ## 5.5 `frontend/js/circuit_view.js`

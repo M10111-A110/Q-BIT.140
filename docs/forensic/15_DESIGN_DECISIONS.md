@@ -3,14 +3,14 @@
 ## ADR-001: Strict Separation of Quantum Engine (M3) and Learner Engine (M2)
 - **Status**: **ACCEPTED & IMPLEMENTED**
 - **Problem**: In educational software, quantum mechanics simulation logic and cognitive student modeling are frequently intertwined, causing physics rules to be distorted by pedagogical heuristics.
-- **Decision**: M3 is an isolated, Qiskit-free physical simulator. M2 is a pure-Python cognitive model. M3 executes quantum circuits without knowing who the student is; M2 evaluates evidence without knowing how Qiskit constructs gates.
-- **Tradeoff**: Requires M4 to orchestrate data transfer between M3 and M2, increasing boilerplate.
+- **Decision**: M3 is an isolated, Qiskit-free physical simulation engine. M2 is a pure-Python cognitive model. M3 executes quantum circuits without knowing who the student is; M2 evaluates evidence without knowing how Qiskit constructs gates.
+- **Tradeoff**: Requires M4 to orchestrate data transfer between M3 and M2, increasing explicit contract definitions.
 - **Code Evidence**: `backend/quantum/` has zero imports from `backend/adaptive/`, and `backend/adaptive/` has zero imports from `backend/quantum/` or `qiskit`.
 
 ## ADR-002: Deterministic Adaptive Decision Making vs LLM-Based Routing
 - **Status**: **ACCEPTED & IMPLEMENTED**
 - **Problem**: LLMs used as pedagogical decision makers suffer from hallucinations, inconsistent curriculum progression, and unrepeatable remediation paths.
-- **Decision**: M2 is 100% deterministic, implementing formal graph traversal, Bayesian mastery formulas, and explicit rule tables. M5 (LLM) is strictly an explanation layer.
+- **Decision**: M2 is 100% deterministic, implementing a transparent linear mastery heuristic ($\text{diag} + \text{improvement} - \text{penalty}$), prerequisite bottleneck detection, and explicit rule tables. M5 (LLM) is strictly an explanation layer.
 - **Tradeoff**: Creating new curriculum paths requires explicit DAG definition rather than dynamic prompt engineering.
 - **Code Evidence**: `backend/adaptive/engine.py` contains zero imports from `backend/ai/` or LLM libraries.
 
@@ -31,6 +31,6 @@
 ## ADR-005: 100% Offline Fallback via `MockLLMProvider`
 - **Status**: **ACCEPTED & IMPLEMENTED**
 - **Problem**: Hackathon environments, student classrooms, and offline evaluations cannot rely on guaranteed external LLM API connectivity or paid API credits.
-- **Decision**: Implement `MockLLMProvider` featuring a 9-tier deterministic intent engine producing KaTeX-formatted quantum explanations.
+- **Decision**: Implement `MockLLMProvider` featuring structured evidence parsing and deterministic KaTeX-formatted quantum explanations.
 - **Tradeoff**: Pre-defined explanations cover curriculum topics thoroughly but cannot answer arbitrary out-of-domain trivia.
 - **Code Evidence**: `backend/ai/providers.py:MockLLMProvider`.

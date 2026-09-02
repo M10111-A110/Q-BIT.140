@@ -5,16 +5,16 @@
 - **Repository**: `Q-BIT.140`
 - **Target Branch**: `integration/mvp`
 - **Frozen MVP Target Commit**: `3d6521036ecc62c69211c2007b0f9e7439da194f`
-- **Audited Commit**: `f01d3c6db351016bca0f3b3070294d75982eb3d1` (Docs-only alignment; application source is 100% byte-for-byte identical to frozen MVP)
+- **Audited Commit**: `aa7b9484b39794eb84e4431d1678f1ae43ebfa55` (Documentation reconciliation pass; application source is 100% byte-for-byte identical to frozen MVP)
 - **Audit Date**: September 2, 2026
-- **Test Suite Status**: **305 passed, 0 failed, 1 warning (4.92s)**
-- **Application Code Modification Status**: **UNTOUCHED / UNMODIFIED** (Only documentation in `docs/forensic/` created)
+- **Test Suite Status**: **305 passed, 0 failed, 1 warning (2.77s)**
+- **Application Code Modification Status**: **UNTOUCHED / UNMODIFIED** (Only documentation in `docs/forensic/` created/reconciled)
 
 ---
 
 ## 2. Directory Structure of the Forensic Pack
 
-This directory (`docs/forensic/`) contains 22 code-grounded forensic documents:
+This directory (`docs/forensic/`) contains 23 code-grounded forensic documents:
 
 1. [`00_MASTER_INDEX.md`](./00_MASTER_INDEX.md) — Master navigation, source-of-truth hierarchy, study order.
 2. [`00_REPOSITORY_INVENTORY.md`](./00_REPOSITORY_INVENTORY.md) — Exhaustive file-by-file classification of all 79 tracked files.
@@ -22,7 +22,7 @@ This directory (`docs/forensic/`) contains 22 code-grounded forensic documents:
 4. [`02_END_TO_END_DATA_FLOW.md`](./02_END_TO_END_DATA_FLOW.md) — 8-stage sequence trace of the complete pedagogical loop.
 5. [`03_FILE_BY_FILE_REFERENCE.md`](./03_FILE_BY_FILE_REFERENCE.md) — Deep dive reference for every single source file.
 6. [`04_M1_FRONTEND_DEEP_DIVE.md`](./04_M1_FRONTEND_DEEP_DIVE.md) — UI DOM lifecycle, state triad, and event handling.
-7. [`05_M2_ADAPTIVE_LEARNER_MODEL.md`](./05_M2_ADAPTIVE_LEARNER_MODEL.md) — 4-Tier cognitive engine, mastery formulas, routing rules.
+7. [`05_M2_ADAPTIVE_LEARNER_MODEL.md`](./05_M2_ADAPTIVE_LEARNER_MODEL.md) — 4-Tier cognitive engine, linear mastery formula, routing rules.
 8. [`06_M3_QUANTUM_ENGINE_DEEP_DIVE.md`](./06_M3_QUANTUM_ENGINE_DEEP_DIVE.md) — Grover 2-qubit Qiskit Aer simulation, state vectors.
 9. [`07_M4_BACKEND_API_INTEGRATION.md`](./07_M4_BACKEND_API_INTEGRATION.md) — FastAPI endpoints, request schemas, error codes.
 10. [`08_M5_GROUNDED_AI_DEEP_DIVE.md`](./08_M5_GROUNDED_AI_DEEP_DIVE.md) — RAG retrieval, boundary limits, MockLLM fallbacks.
@@ -35,19 +35,20 @@ This directory (`docs/forensic/`) contains 22 code-grounded forensic documents:
 17. [`15_DESIGN_DECISIONS.md`](./15_DESIGN_DECISIONS.md) — Architecture Decision Records (ADRs) with tradeoffs.
 18. [`16_THEORY_TO_CODE_MAP.md`](./16_THEORY_TO_CODE_MAP.md) — Math formulas mapped to concrete Python symbols.
 19. [`17_TECHNICAL_JUDGE_QA.md`](./17_TECHNICAL_JUDGE_QA.md) — Hackathon question bank across 25 categories.
-20. [`18_CLAIM_EVIDENCE_MATRIX.md`](./18_CLAIM_EVIDENCE_MATRIX.md) — Verification classification preventing overclaiming.
+20. [`18_CLAIM_EVIDENCE_MATRIX.md`](./18_CLAIM_EVIDENCE_MATRIX.md) — Claim verification matrix (VERIFIED, CONDITIONAL, DO NOT CLAIM).
 21. [`19_DOCUMENTATION_CONFLICTS.md`](./19_DOCUMENTATION_CONFLICTS.md) — Explicit record of contradictions and stale claims.
-22. [`README.md`](./README.md) — Executive summary (this document).
+22. [`20_RECONCILIATION_REPORT.md`](./20_RECONCILIATION_REPORT.md) — Detailed reconciliation report of all corrected forensic claims.
+23. [`README.md`](./README.md) — Executive summary (this document).
 
 ---
 
 ## 3. Major Findings & Architectural Strengths
 
-1. **Zero Hallucination Physical Execution**: M3 runs genuine 1024-shot simulations on `qiskit_aer.AerSimulator()`.
-2. **Pure Deterministic Cognitive Modeling**: M2 uses Bayesian mastery updates and deterministic rule tables with zero LLM in the decision loop.
+1. **Authoritative Quantum Simulation**: M3 runs genuine 1024-shot simulations on `qiskit_aer.AerSimulator()`.
+2. **Pure Deterministic Cognitive Modeling**: M2 uses linear mastery updates ($\text{diag} + \text{improvement} - \text{penalty}$) and deterministic rule tables with zero LLM in the decision loop.
 3. **State Triad Visual Clarity**: The frontend physically separates Prediction ($|01\rangle$) $\neq$ Target ($|10\rangle$) $\neq$ Result ($|10\rangle$ at $93.8\%$).
 4. **100% Offline Hackathon Resilience**: Features `MockLLMProvider` with KaTeX output and in-memory persistence, enabling flawless operation without internet or API keys.
-5. **Rock-Solid Test Coverage**: 305 tests passing in under 5 seconds across all architectural layers.
+5. **Rock-Solid Test Coverage**: 305 tests passing in under 3 seconds across all architectural layers.
 
 ---
 

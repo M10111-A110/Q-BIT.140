@@ -20,7 +20,7 @@ sequenceDiagram
     
     Note over M4,M3: STAGE 2: Authoritative Quantum Execution
     M4->>DB: repo.get("L1") -> load persistent LearnerState
-    M4->>M3: run_experiment(QuantumExperiment(algorithm="grover_2q", target_state="10", shots=1024))
+    M4->>M3: run_experiment(QuantumExperiment(algorithm="grover", target_state="10", shots=1024))
     M3->>M3: build_grover_circuit() -> AerSimulator.run() -> get_counts()
     M3-->>M4: SimulationResult (counts: {"10": 961, "00": 21, "01": 22, "11": 20})
 
@@ -75,14 +75,14 @@ sequenceDiagram
 
 ### Transition C: Authoritative Quantum Execution
 - **Source**: `backend/quantum/engine.py:run_experiment()`
-- **Schema**: Constructs `QuantumExperiment(algorithm="grover_2q", num_qubits=2, target_state="10", iterations=1, shots=1024)`
+- **Schema**: Constructs `QuantumExperiment(algorithm="grover", num_qubits=2, target_state="10", iterations=1, shots=1024)`
 - **Validation**: `backend/quantum/validator.py:validate_experiment()` verifies `algorithm in ALGORITHM_REGISTRY`, `shots > 0`, `num_qubits == len(target_state)`.
 - **Circuit Construction**: `backend/quantum/algorithms/grover.py:build_grover_circuit()`:
   - Adds Hadamard gates on qubits 0 and 1: $H^{\otimes 2}|00\rangle = \frac{1}{2}(|00\rangle + |01\rangle + |10\rangle + |11\rangle)$.
   - Applies Oracle for target state $|10\rangle$: $X(q_0) \rightarrow CZ(q_0, q_1) \rightarrow X(q_0)$, marking $|10\rangle$ with a $\pi$ phase flip ($-|10\rangle$).
   - Applies Diffusion Operator: $H^{\otimes 2} \rightarrow X^{\otimes 2} \rightarrow CZ \rightarrow X^{\otimes 2} \rightarrow H^{\otimes 2}$, performing inversion about the mean.
   - Adds measurement operations to classical registers $c_0, c_1$.
-- **Execution**: `backend/quantum/execution.py:execute_circuit()` passes circuit to `qiskit_aer.AerSimulator().run(shots=1024)`.
+- **Execution**: `backend/quantum/execution.py:execute_circuit()` passes circuit to local `qiskit_aer.AerSimulator().run(shots=1024)`.
 - **Output**: Returns raw counts, e.g. `{"10": 961, "00": 21, "01": 22, "11": 20}`.
 - **Normalization**: Wraps counts in `SimulationResult` (`backend/quantum/results.py`), calculating derived properties:
   - `probabilities`: `{"10": 0.9385, "00": 0.0205, "01": 0.0215, "11": 0.0195}`
@@ -103,10 +103,12 @@ sequenceDiagram
 - **Source**: `backend/adaptive/engine.py:LearnerModel.record_evidence()`
 - **State Updates**:
   - Appends `evidence.to_dict()` to `state.evidence_history`.
-  - Updates `state.attempts["quantum.algorithm.grover_2q"] += 1`.
-  - Appends `0.0` to `state.score_history["quantum.algorithm.grover_2q"]`.
-  - Records error: `state.errors["Grover's Algorithm"].append("01")`.
-  - Computes Bayesian mastery: $\text{Mastery} = \frac{1 + \sum w_i S_i}{2 + \sum w_i} \approx 0.33$.
+  - Updates `state.attempts["grover.search_problem"] += 1`.
+  - Appends `0.0` to `state.score_history["grover.search_problem"]`.
+  - Records error: `state.errors["Grover Search Problem"].append("01")`.
+  - Computes linear mastery:
+    $$\text{Mastery} = \text{clamp}_{[0, 1]}(\text{diag\_score} + \text{improvement\_bonus} - \text{error\_penalty})$$
+    For score $0.0$, improvement $0.0$, 1 error ($0.05$ penalty) $\rightarrow \text{Mastery} = 0.0$.
   - Generates `GapInference`: `status="observing"`, `confidence=0.35`, `trend="initial_observation"`, `evidence_sufficiency="insufficient"`.
 - **Pedagogical Routing Decision**:
   - Single Error Rule: Since `recent_errors == 1`, M2 triggers `action="gather_evidence"`, `target="act_grover_2q_predict"`.
@@ -118,7 +120,7 @@ sequenceDiagram
 - **Serialization**: Returns `SubmissionResponse` (Pydantic model) containing the complete 6-element envelope:
   1. `activity` (metadata)
   2. `learner_response` (`"01"`)
-  3. `verified_result` (Qiskit simulation counts & probabilities)
+  3. `verified_result` (Qiskit Aer simulation counts & probabilities)
   4. `evidence` (correctness, sufficiency, timestamp)
   5. `learner_state` (accumulated mastery and gap inferences)
   6. `adaptive_decision` (action, target, reason, trigger)

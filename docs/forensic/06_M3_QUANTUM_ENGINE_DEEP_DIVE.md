@@ -2,7 +2,7 @@
 
 ## 1. Engine Overview & Guarantees
 
-The M3 Quantum Engine (`backend/quantum/`) is the authoritative source of physical quantum execution in Q-BIT.140.
+The M3 Quantum Engine (`backend/quantum/`) is the authoritative source of quantum execution simulation in Q-BIT.140.
 
 ### Core Architectural Guarantees:
 1. **Real Quantum Execution**: Runs real quantum circuits compiled in Qiskit 1.0+ on `qiskit_aer.AerSimulator()` with 1024 measurement shots.

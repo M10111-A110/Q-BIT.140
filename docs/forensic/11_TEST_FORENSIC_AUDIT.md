@@ -4,7 +4,7 @@
 
 - **Total Test Files Discovered**: 37 test files (plus 4 `__init__.py` files)
 - **Total Tests Executed**: **305 passed** (0 failed, 1 warning)
-- **Execution Time**: **4.92 seconds**
+- **Execution Time**: **2.77 seconds**
 - **Test Framework**: `pytest 9.1.1` with `pytest-asyncio` and FastAPI `TestClient`.
 - **Coverage Distribution**:
   - **M3 Quantum Engine**: 129 tests (10 files) — $42.3\%$ of test suite
@@ -42,10 +42,10 @@ pie title Test Distribution by Architectural Layer (305 Tests)
 3. `test_models.py` (11 tests): Tests dataclass serialization, `LearnerState` mutation, and `LearnerContext` construction.
 4. `test_pass4_evidence_trace.py` (9 tests): Verifies end-to-end evidence IDs, trigger labels, and cognitive hypothesis generation.
 5. `test_diagnostics.py` (9 tests): Validates diagnostic question loader from CSV and quiz scoring logic.
-6. `test_mastery.py` (7 tests): Validates Bayesian mastery formula, recency decay weight ($\lambda = 0.85$), and prerequisite gating rule.
+6. `test_mastery.py` (7 tests): Validates deterministic mastery formula ($\text{diag} + \text{improvement} - \text{penalty}$), improvement bonus cap ($+0.20$), error penalty cap ($-0.30$), and bounds clamping.
 7. `test_routing.py` (6 tests): Validates deterministic routing rules (`advance`, `gather_evidence`, `targeted_remediation`).
 8. `test_state_semantics.py` (6 tests): Validates state determinism, idempotency, and audit trail accumulation.
-9. `test_activities.py` (5 tests): Tests activity catalog lookups and prerequisite chains.
+9. `test_activities.py` (5 tests): Tests activity catalog lookups and prerequisite chains across registered activities (`act_grover_2q_predict`, `act_measurement_prob_diagnostic`, `act_superposition_remediation`, `act_grover_iteration_reasoning`).
 10. `test_evidence_progression.py` (4 tests): Verifies multi-attempt evidence accumulation and transition from `insufficient` to `sufficient`.
 11. `test_vertical_slice.py` (1 test): End-to-end unit test of the M2 decision cycle.
 

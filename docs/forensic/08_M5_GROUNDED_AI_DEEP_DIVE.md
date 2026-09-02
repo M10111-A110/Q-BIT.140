@@ -1,8 +1,8 @@
 # Q-BIT.140 — M5 Grounded AI Guidance Deep Dive
 
-## 1. Architectural Philosophy: The Grounding Barrier
+## 1. Architectural Philosophy: Grounded AI with Explicit Evidence Boundaries
 
-The M5 Grounded AI Guidance layer (`backend/ai/`) provides explanatory pedagogical tutoring while enforcing a **strict operational boundary** between generative text synthesis and authoritative system facts.
+The M5 Grounded AI Guidance layer (`backend/ai/`) provides explanatory pedagogical tutoring while enforcing an **explicit operational boundary** between generative text synthesis and authoritative system facts.
 
 ```mermaid
 graph TD
@@ -11,7 +11,7 @@ graph TD
     end
 
     subgraph "M5 Grounded Pipeline"
-        EV[Verified M3 Counts & M2 Decision]
+        EV[Verified M3 Aer Counts & M2 Decision]
         RAG[In-Tree Knowledge Retrieval (12 Markdown Docs)]
         PROMPT[Grounding Prompt Assembly (prompts.py)]
         LLM[LLM Provider: Groq / MockLLM]
@@ -81,14 +81,9 @@ M5 implements two provider backends under `LLMProvider` (`backend/ai/providers.p
    - Enabled when `GROQ_API_KEY` is present in environment variables.
 2. **`MockLLMProvider` (Deterministic Offline Engine)**:
    - 100% offline, zero-network-dependency provider.
-   - Evaluates incoming prompts using a 9-tier intent classifier:
-     1. Experiment Explanations (Grover predictions, mismatch vs match analysis)
-     2. Remediation Explanations (Prerequisite bottleneck reasoning)
-     3. Adaptive Decision Explanations ("Why did the system assign this activity?")
-     4. Learner State Inquiries (Cognitive tracking and mastery)
-     5. Qubit Concept Inquiries ($|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$)
-     6. Superposition Inquiries ($H|0\rangle = \frac{|0\rangle + |1\rangle}{\sqrt{2}}$, $50\%$ probability)
-     7. Measurement / Born Rule Inquiries ($P(x) = |\alpha_x|^2$)
-     8. Grover Algorithm Inquiries (Oracle, Diffusion, Inversion about mean)
-     9. Honest Out-of-Scope Fallback.
-   - Outputs beautifully formatted Markdown with native KaTeX LaTeX equations.
+   - Extracts structured prompt markers (`Evidence Type:`, `- Concept ID:`, `- Activity ID:`, `- Evidence ID:`, `- Learner Response:`, `- Evaluation Outcome:`, `- Theoretical Target State:`, `- Empirical Most-Likely Measured State:`, `- Action:`, `- Target Activity:`, `- Pedagogical Rationale:`).
+   - Routes to two evidence-grounded generators:
+     1. `_generate_quantum_execution_explanation`: Explains physical simulation counts, target states, and amplitude amplification.
+     2. `_generate_conceptual_explanation`: Explains conceptual multiple-choice diagnostic options, Born's rule, or Grover iteration reasoning.
+   - For free-form inquiries without structured evidence, routes to `_generate_qa_explanation` using curriculum keyword matching.
+   - Outputs formatted Markdown with native KaTeX LaTeX equations.

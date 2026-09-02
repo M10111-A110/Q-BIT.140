@@ -7,8 +7,8 @@ This document provides concise, technically rigorous, code-grounded answers to r
 ## Category 1: Problem & Architectural Motivation
 
 ### Q1.1: What exact problem does Q-BIT.140 solve that generic AI tutors (e.g. ChatGPT) cannot?
-- **Short Answer**: It eliminates pedagogical and physical hallucinations by decoupling deterministic cognitive modeling (M2) and real Qiskit quantum execution (M3) from generative text synthesis (M5).
-- **Detailed Answer**: Generic LLMs hallucinate quantum simulation outcomes (e.g. claiming a circuit produced $|11\rangle$ when physics dictates $|10\rangle$) and arbitrarily jump between curriculum topics. Q-BIT.140 uses real Qiskit Aer simulation for physical ground truth and a deterministic Bayesian DAG for student mastery. The LLM is restricted to an explanation-only role.
+- **Short Answer**: It eliminates pedagogical and physical hallucinations by decoupling deterministic cognitive modeling (M2) and real Qiskit Aer quantum simulation (M3) from generative text synthesis (M5).
+- **Detailed Answer**: Generic LLMs hallucinate quantum simulation outcomes (e.g. claiming a circuit produced $|11\rangle$ when physics dictates $|10\rangle$) and arbitrarily jump between curriculum topics. Q-BIT.140 uses real Qiskit Aer simulation for physical ground truth and a deterministic mastery DAG for student progress. The LLM is restricted to an explanation-only role.
 - **Code Evidence**: `backend/quantum/execution.py:execute_circuit` (Real Aer simulator), `backend/adaptive/engine.py:LearnerModel` (Deterministic DAG).
 
 ---
@@ -16,7 +16,7 @@ This document provides concise, technically rigorous, code-grounded answers to r
 ## Category 2: Quantum Engine & Grover's Algorithm
 
 ### Q2.1: Is your quantum execution simulated or running on real hardware? Why?
-- **Short Answer**: It runs on a local `qiskit_aer.AerSimulator()` executing 1024 shots.
+- **Short Answer**: It runs on a local `qiskit_aer.AerSimulator()` executing 1024 finite measurement shots.
 - **Detailed Answer**: For an educational MVP, AerSimulator provides deterministic, zero-latency, zero-cost execution with full support for finite-shot statistical sampling. The M3 interface (`run_experiment()`) is fully decoupled; swapping `AerSimulator` for IBM Quantum's cloud `SamplerV2` requires changing only one file (`backend/quantum/execution.py`).
 - **Code Evidence**: `backend/quantum/execution.py:execute_circuit`.
 
@@ -26,7 +26,7 @@ This document provides concise, technically rigorous, code-grounded answers to r
   1. $H^{\otimes 2}$ creates uniform superposition $|s\rangle = \frac{1}{2}(|00\rangle + |01\rangle + |10\rangle + |11\rangle)$.
   2. Oracle $X(q_0) \rightarrow CZ \rightarrow X(q_0)$ flips the phase of $|10\rangle \mapsto -|10\rangle$.
   3. Diffusion $H^{\otimes 2} \rightarrow X^{\otimes 2} \rightarrow CZ \rightarrow X^{\otimes 2} \rightarrow H^{\otimes 2}$ performs inversion about the mean, boosting amplitude of $|10\rangle$ to $1.0$.
-  4. Measurement yields outcome $10$ with theoretical $100\%$ probability.
+  4. Measurement yields outcome $10$ with theoretical $100\%$ probability (empirically sampled across 1024 shots).
 - **Code Evidence**: `backend/quantum/algorithms/grover.py:build_grover_circuit`.
 
 ---
@@ -39,8 +39,8 @@ This document provides concise, technically rigorous, code-grounded answers to r
 - **Code Evidence**: `backend/adaptive/engine.py:360-372`.
 
 ### Q3.2: How is learner mastery calculated? Is it machine learning?
-- **Short Answer**: It is a deterministic Bayesian recency-weighted formula, not a black-box neural network.
-- **Detailed Answer**: Mastery is calculated as $\text{Mastery}(c) = \frac{1.0 + \sum w_i S_i}{2.0 + \sum w_i}$ with recency decay $w_i = 0.85^{k-1-i}$. It is further gated by the minimum mastery of foundational prerequisites: $\text{Mastery}_{\text{gated}}(c) = \min(\text{Mastery}(c), \min_p \text{Mastery}(p))$.
+- **Short Answer**: It is a transparent, deterministic linear heuristic based on diagnostic scores, positive trajectory deltas, and error penalties—not a black-box model.
+- **Detailed Answer**: Mastery is calculated as $\text{Mastery}(c) = \text{clamp}_{[0, 1]}(\text{diag\_score} + \text{improvement\_bonus} - \text{error\_penalty})$ where improvement bonus is up to $+0.20$ and error penalty is $0.05$ per error (capped at $0.30$).
 - **Code Evidence**: `backend/adaptive/engine.py:compute_mastery`.
 
 ---
@@ -54,7 +54,7 @@ This document provides concise, technically rigorous, code-grounded answers to r
 
 ### Q4.2: What happens if the Groq API goes down or you lose internet access during the hackathon presentation?
 - **Short Answer**: The system automatically and transparently falls back to `MockLLMProvider`, which runs 100% locally and offline.
-- **Detailed Answer**: `get_default_provider()` catches API initialization errors and initializes `MockLLMProvider`. This offline provider uses a 9-tier deterministic intent matcher to generate complete KaTeX-formatted quantum explanations without sending a single network packet.
+- **Detailed Answer**: `get_default_provider()` catches API initialization errors and initializes `MockLLMProvider`. This offline provider uses structured evidence parsing to generate complete KaTeX-formatted quantum explanations without sending a single network packet.
 - **Code Evidence**: `backend/ai/providers.py:MockLLMProvider`, `get_default_provider`.
 
 ---
