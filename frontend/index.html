@@ -68,7 +68,7 @@
     <div class="header-right">
         <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">Learner ID:</span>
-            <input type="text" id="learnerIdInput" value="demo_learner" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; width: 120px;">
+            <input type="text" id="learnerIdInput" value="" placeholder="learner_..." style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; width: 140px;">
         </div>
         <button class="btn secondary" style="padding: 6px 10px; font-size: 11px;" onclick="handleResetSession()">🔄 Reset Session</button>
         <button class="btn secondary" style="padding: 6px 10px; font-size: 11px;" onclick="openAskModal()">🤖 Ask AI</button>
@@ -753,9 +753,45 @@
         banner.style.display = "flex";
     }
 
+    function initLearnerId() {
+        let savedId = null;
+        try {
+            savedId = localStorage.getItem("qbit_current_learner_id");
+        } catch {}
+
+        if (!savedId) {
+            const uuid = (typeof crypto !== "undefined" && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : Math.random().toString(36).substring(2, 10);
+            savedId = `learner_${uuid}`;
+            try {
+                localStorage.setItem("qbit_current_learner_id", savedId);
+            } catch {}
+        }
+        const inputEl = document.getElementById("learnerIdInput");
+        if (inputEl) {
+            inputEl.value = savedId;
+            inputEl.addEventListener("change", () => {
+                const manualId = inputEl.value.trim();
+                if (manualId) {
+                    try {
+                        localStorage.setItem("qbit_current_learner_id", manualId);
+                    } catch {}
+                    loadProfileOnBoot();
+                }
+            });
+        }
+    }
+
     window.handleResetSession = function() {
-        const newLearnerId = "demo_learner_" + Math.floor(1000 + Math.random() * 9000);
+        const uuid = (typeof crypto !== "undefined" && crypto.randomUUID)
+            ? crypto.randomUUID().slice(0, 8)
+            : Math.random().toString(36).substring(2, 10);
+        const newLearnerId = `learner_${uuid}`;
         document.getElementById("learnerIdInput").value = newLearnerId;
+        try {
+            localStorage.setItem("qbit_current_learner_id", newLearnerId);
+        } catch {}
         loadProfileOnBoot();
         loadActivity("act_grover_2q_predict");
     };
@@ -765,6 +801,7 @@
     // -------------------------------------------------------------------
     async function initApp() {
         try {
+            initLearnerId();
             activitiesList = await fetchActivities();
             renderJourneyTrack();
             loadProfileOnBoot();

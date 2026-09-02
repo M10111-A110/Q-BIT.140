@@ -89,8 +89,34 @@ class MockLLMProvider(LLMProvider):
         )
 
     def _generate_qa_explanation(self, user_msg: str) -> str:
-        lower = user_msg.lower()
-        if "grover" in lower or "algorithm" in lower:
+        # Extract the actual learner question from the prompt
+        q_match = re.search(r"LEARNER QUESTION:\s*([^\n]+(?:\n[^\n]+)*?)(?:\n\nPlease answer|\Z)", user_msg, re.IGNORECASE)
+        question_text = q_match.group(1).strip() if q_match else user_msg.strip()
+        lower_q = question_text.lower()
+
+        # Intent a: Superposition / Qubit
+        if any(k in lower_q for k in ["superposition", "qubit", "hadamard", "basis state", "|+⟩", "|-⟩", "bloch"]):
+            return (
+                "### Quantum Superposition\n\n"
+                "A qubit can exist in a superposition state $|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle$, "
+                "where $\\alpha, \\beta \\in \\mathbb{C}$ and $|\\alpha|^2 + |\\beta|^2 = 1$.\n\n"
+                "Applying a Hadamard gate $H$ to $|0\\rangle$ yields:\n"
+                "$$H|0\\rangle = \\frac{|0\\rangle + |1\\rangle}{\\sqrt{2}}$$\n"
+                "This produces equal measurement probabilities of $50\\%$ ($P(0) = P(1) = 0.5$)."
+            )
+
+        # Intent b: Measurement / Probability / Born Rule
+        elif any(k in lower_q for k in ["measurement", "probability", "born", "collapse", "shots", "distribution"]):
+            return (
+                "### Quantum Measurement & Probability\n\n"
+                "In quantum mechanics, measurement collapses the wavefunction according to the state's complex amplitudes. "
+                "For a state $|\\psi\\rangle = \\sum_x \\alpha_x |x\\rangle$, the probability of observing outcome $x$ is given by Born's rule: "
+                "$$P(x) = |\\alpha_x|^2$$\n"
+                "Counts from a finite number of shots approximate this underlying probability distribution."
+            )
+
+        # Intent c: Grover / Oracle / Diffusion
+        elif any(k in lower_q for k in ["grover", "oracle", "diffusion", "amplification", "inversion"]):
             return (
                 "### Grover's Algorithm Overview\n\n"
                 "Grover's algorithm searches an unstructured database of $N = 2^n$ items in $\\mathcal{O}(\\sqrt{N})$ oracle queries.\n\n"
@@ -100,29 +126,44 @@ class MockLLMProvider(LLMProvider):
                 "3. Apply Diffusion Operator: $D = 2|s\\rangle\\langle s| - I$.\n"
                 "4. Measure the computational basis state after $\\approx \\frac{\\pi}{4}\\sqrt{N}$ iterations."
             )
-        elif "superposition" in lower or "qubit" in lower:
+
+        # Intent d: Prediction Mismatch / Verified Outcome
+        elif any(k in lower_q for k in ["prediction", "differ", "mismatch", "incorrect", "wrong", "verified result", "actual result", "outcome"]):
             return (
-                "### Quantum Superposition\n\n"
-                "A qubit can exist in a superposition state $|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle$, "
-                "where $\\alpha, \\beta \\in \\mathbb{C}$ and $|\\alpha|^2 + |\\beta|^2 = 1$.\n\n"
-                "Applying a Hadamard gate $H$ to $|0\\rangle$ yields:\n"
-                "$$H|0\\rangle = \\frac{|0\\rangle + |1\\rangle}{\\sqrt{2}}$$\n"
-                "This produces equal measurement probabilities of $50\\%$ ($P(0) = P(1) = 0.5$)."
-            )
-        elif "measurement" in lower or "probability" in lower:
-            return (
-                "### Quantum Measurement & Probability\n\n"
-                "In quantum mechanics, measurement collapses the wavefunction according to the state's complex amplitudes. "
-                "For a state $|\\psi\\rangle = \\sum_x \\alpha_x |x\\rangle$, the probability of observing outcome $x$ is given by Born's rule: "
-                "$$P(x) = |\\alpha_x|^2$$\n"
-                "Counts from a finite number of shots approximate this underlying probability distribution."
+                "### Prediction vs Quantum Execution\n\n"
+                "A prediction mismatch occurs when the learner's hypothesized basis state does not match "
+                "the high-probability state produced by the physical quantum circuit.\n\n"
+                "In Grover's search, the phase oracle flips the amplitude sign of the target state ($O|w\\rangle = -|w\\rangle$), "
+                "and the diffusion operator inverts amplitudes about the mean ($D = 2|s\\rangle\\langle s| - I$). "
+                "If an incorrect state was predicted, the empirical 1024-shot simulation reflects the actual amplified target state rather than the guess."
             )
 
+        # Intent e: Adaptive Recommendation / "Why This Next?"
+        elif any(k in lower_q for k in ["next", "recommend", "why this", "selected", "activity", "remediation", "advance", "routing"]):
+            return (
+                "### Adaptive Learning Path (\"Why This Next?\")\n\n"
+                "Q-BIT's M2 Cognitive Engine determines the next pedagogical activity deterministically based on accumulated empirical evidence:\n\n"
+                "- **Single Error**: Triggers `gather_evidence` to confirm whether a difficulty is persistent before intervening.\n"
+                "- **Repeated Errors**: Triggers `targeted_remediation` by citing historical attempt records and routing to prerequisite concept diagnostics.\n"
+                "- **Mastery / Recovery**: Triggers `advance` to progress along the curriculum DAG once understanding is demonstrated."
+            )
+
+        # Intent f: Learner State / Progress
+        elif any(k in lower_q for k in ["learner state", "progress", "mastery", "score", "trajectory", "gap", "inference"]):
+            return (
+                "### Learner State & Cognitive Tracking\n\n"
+                "Q-BIT tracks your conceptual understanding across a 4-tier cognitive architecture:\n\n"
+                "- **Tier 1 (Evidence)**: Empirical attempt records pairing your responses with Qiskit Aer simulation counts.\n"
+                "- **Tier 2 (Accumulated State)**: Chronological attempt counts, error sequences, and score trajectories.\n"
+                "- **Tier 3 (Cognitive Gaps)**: Calibrated Bayesian mastery probabilities and gap hypotheses (e.g. `observing`, `remediation_needed`, `improving`, `mastered`).\n"
+                "- **Tier 4 (Pedagogical Action)**: Deterministic routing decisions grounded in evidence sufficiency."
+            )
+
+        # Intent g: Honest fallback for unknown questions
         return (
             "### Q-BIT AI Guidance\n\n"
-            "Grounded explanation based on curriculum knowledge:\n"
-            "Quantum algorithms utilize superposition, unitary phase operations ($U|\\psi\\rangle$), "
-            "and constructive interference to amplify target solution amplitudes prior to measurement."
+            "I can explain quantum superposition, measurement probability, Grover's algorithm, experiment predictions, "
+            "adaptive recommendations, and your cognitive learner state. Please ask a question related to these topics."
         )
 
 
