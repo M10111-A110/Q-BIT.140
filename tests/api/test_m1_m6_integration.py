@@ -102,7 +102,12 @@ def test_conceptual_choice_submission_and_explanation_flow():
     )
     assert exp_res.status_code == 200
     exp_data = exp_res.json()
-    assert "Quantum Execution Analysis" in exp_data["explanation"]
+    assert "Concept Explanation" in exp_data["explanation"]
+    assert "Quantum Execution Analysis" not in exp_data["explanation"]
+    assert "Born's rule" in exp_data["explanation"] or "Born" in exp_data["explanation"]
+    assert "|B⟩" not in exp_data["explanation"]
+    assert "|B\\rangle" not in exp_data["explanation"]
+
 
 
 def test_conceptual_ask_inquiry_flow():

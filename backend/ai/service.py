@@ -46,8 +46,22 @@ def explain_experiment(
     """
     active_provider = provider or get_default_provider()
 
+    # Dynamic, evidence-aware search query based on actual concept, activity, algorithm, and question
+    query_parts = []
     concept_id = evidence.get("concept_id", "")
-    search_query = f"grover oracle diffusion measurement probability {concept_id} {user_question or ''}".strip()
+    if concept_id:
+        query_parts.append(concept_id.replace(".", " "))
+    activity_id = evidence.get("activity_id", "")
+    if activity_id:
+        query_parts.append(activity_id.replace("_", " "))
+    if user_question:
+        query_parts.append(user_question)
+    if verified_result and isinstance(verified_result, dict):
+        algo = verified_result.get("algorithm")
+        if algo:
+            query_parts.append(str(algo))
+
+    search_query = " ".join(query_parts).strip() or "quantum computing foundations"
     curriculum_context = find_relevant_knowledge(search_query, top_n=2)
 
     messages = build_experiment_explanation_prompt(
