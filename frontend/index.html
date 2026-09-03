@@ -421,15 +421,16 @@
             </div>
 
             <div class="gate-toolbar">
-                <button class="gate-btn" onclick="selectGate('H')">H</button>
-                <button class="gate-btn" onclick="selectGate('X')">X</button>
-                <button class="gate-btn" onclick="selectGate('Y')">Y</button>
-                <button class="gate-btn" onclick="selectGate('Z')">Z</button>
-                <button class="gate-btn" onclick="selectGate('S')">S</button>
-                <button class="gate-btn" onclick="selectGate('T')">T</button>
-                <button class="gate-btn" onclick="selectGate('CZ')">CZ</button>
-                <button class="gate-btn" onclick="selectGate('M')">M</button>
+                <div class="gate-btn" role="button" tabindex="0" onclick="selectGate('H')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGate('H');}">H</div>
+                <div class="gate-btn" role="button" tabindex="0" onclick="selectGate('X')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGate('X');}">X</div>
+                <div class="gate-btn" role="button" tabindex="0" onclick="selectGate('Y')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGate('Y');}">Y</div>
+                <div class="gate-btn" role="button" tabindex="0" onclick="selectGate('Z')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGate('Z');}">Z</div>
+                <div class="gate-btn" role="button" tabindex="0" onclick="selectGate('S')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGate('S');}">S</div>
+                <div class="gate-btn" role="button" tabindex="0" onclick="selectGate('T')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGate('T');}">T</div>
+                <div class="gate-btn" role="button" tabindex="0" onclick="selectGate('CZ')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGate('CZ');}">CZ</div>
+                <div class="gate-btn" role="button" tabindex="0" onclick="selectGate('M')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectGate('M');}">M</div>
                 <div style="flex: 1;"></div>
+
                 <button class="btn secondary" style="padding: 5px 10px; font-size: 11px;" onclick="loadCircuitPreset('grover_2q')">Preset: Grover 2Q</button>
                 <button class="btn secondary" style="padding: 5px 10px; font-size: 11px;" onclick="addStudioQubit()">+ Qubit</button>
                 <button class="btn secondary" style="padding: 5px 10px; font-size: 11px;" onclick="clearStudioCircuit()">Clear</button>
@@ -1022,6 +1023,8 @@
         }
     });
     circuitStudio.loadPreset("grover_2q");
+    window.circuitStudio = circuitStudio;
+
 
     // KaTeX Helper Function
     function renderMath(element) {

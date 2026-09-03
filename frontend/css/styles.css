@@ -784,12 +784,21 @@ header {
     font-family: var(--font-mono);
     font-weight: 700;
     font-size: 12px;
-    cursor: pointer;
+    cursor: grab;
     user-select: none;
+    -webkit-user-drag: element;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: 0.15s;
 }
 .gate-btn:hover { transform: translateY(-2px); box-shadow: 0 2px 8px var(--accent-glow); }
 .gate-btn.active-tool { border-color: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+.gate-btn.gate-dragging, .placed-gate.gate-dragging {
+    opacity: 0.45;
+    cursor: grabbing;
+    transform: scale(0.95);
+}
 
 .wire-grid {
     background: var(--bg-secondary);
@@ -835,6 +844,14 @@ header {
     transition: all 0.15s ease;
 }
 .grid-slot:hover { border-color: var(--accent); background: var(--panel); }
+.grid-slot.drag-over {
+    border-color: var(--cyan) !important;
+    background: rgba(34, 211, 238, 0.18) !important;
+    box-shadow: 0 0 10px var(--cyan-glow);
+}
+.grid-slot.drag-over * {
+    pointer-events: none;
+}
 .placed-gate {
     background: var(--gate-bg);
     color: var(--gate-text);
@@ -848,9 +865,13 @@ header {
     font-weight: 700;
     font-size: 12px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    cursor: grab;
+    user-select: none;
+    -webkit-user-drag: element;
 }
 .placed-gate.cz-gate { background: #4C1D95; }
 .placed-gate.m-gate { background: #065F46; }
+
 
 .gate-info-callout {
     font-size: 11px;

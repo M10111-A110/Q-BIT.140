@@ -22,6 +22,8 @@ export class CircuitStudio {
         this.numColumns = options.numColumns || 6;
         this.gates = options.gates || [];
         this.selectedTool = null;
+        this.isDragging = false;
+        this.justDropped = false;
         this.onCircuitChange = options.onCircuitChange || null;
         this.onGateSelect = options.onGateSelect || null;
         this.initPaletteDrag();
@@ -36,14 +38,17 @@ export class CircuitStudio {
                 const payload = JSON.stringify({ source: "palette", type: gateType });
                 e.dataTransfer.setData("application/json", payload);
                 e.dataTransfer.setData("text/plain", payload);
-                e.dataTransfer.effectAllowed = "copy";
+                e.dataTransfer.effectAllowed = "all";
                 btn.classList.add("gate-dragging");
             };
             btn.ondragend = () => {
                 btn.classList.remove("gate-dragging");
+                this.isDragging = false;
             };
         });
     }
+
+
 
     setTool(tool) {
         this.selectedTool = tool;
@@ -139,6 +144,7 @@ export class CircuitStudio {
 
                     gateEl.ondragstart = (e) => {
                         e.stopPropagation();
+                        this.isDragging = true;
                         const payload = JSON.stringify({
                             source: "placed",
                             id: gate.id,
@@ -148,12 +154,13 @@ export class CircuitStudio {
                         });
                         e.dataTransfer.setData("application/json", payload);
                         e.dataTransfer.setData("text/plain", payload);
-                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.effectAllowed = "all";
                         gateEl.classList.add("gate-dragging");
                     };
 
                     gateEl.ondragend = () => {
                         gateEl.classList.remove("gate-dragging");
+                        setTimeout(() => { this.isDragging = false; }, 50);
                     };
 
                     slot.appendChild(gateEl);
@@ -162,17 +169,22 @@ export class CircuitStudio {
                 // Drag over slot feedback
                 slot.ondragover = (e) => {
                     e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
+                    e.dataTransfer.dropEffect = "copy";
                     slot.classList.add("drag-over");
                 };
 
-                slot.ondragleave = () => {
-                    slot.classList.remove("drag-over");
+                slot.ondragleave = (e) => {
+                    if (!slot.contains(e.relatedTarget)) {
+                        slot.classList.remove("drag-over");
+                    }
                 };
 
                 slot.ondrop = (e) => {
                     e.preventDefault();
                     slot.classList.remove("drag-over");
+                    this.isDragging = false;
+                    slot._justDropped = true;
+                    setTimeout(() => { slot._justDropped = false; }, 50);
 
                     let payload = null;
                     try {
@@ -187,8 +199,15 @@ export class CircuitStudio {
                 };
 
                 // Click-to-place or click-to-remove
-                slot.onclick = () => this.handleSlotClick(q, c);
+                slot.onclick = () => {
+                    if (slot._justDropped) {
+                        slot._justDropped = false;
+                        return;
+                    }
+                    this.handleSlotClick(q, c);
+                };
                 line.appendChild(slot);
+
             }
 
             row.appendChild(line);
@@ -238,12 +257,14 @@ export class CircuitStudio {
             if (this.onGateSelect) this.onGateSelect(movedGate);
         }
 
+        this.isDragging = false;
         this.render();
         if (this.onCircuitChange) this.onCircuitChange(this.gates);
     }
 
     handleSlotClick(q, c) {
         const idx = this.gates.findIndex(g => g.qubit === q && g.column === c);
+
         if (idx >= 0) {
             const removed = this.gates.splice(idx, 1)[0];
             if (this.onGateSelect) this.onGateSelect(null);
@@ -260,4 +281,5 @@ export class CircuitStudio {
         this.render();
         if (this.onCircuitChange) this.onCircuitChange(this.gates);
     }
+
 }

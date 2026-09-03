@@ -615,3 +615,244 @@ def test_validate_ask_ai_workspace_rendered_in_browser_desktop_viewport():
         if server:
             server.should_exit = True
         shutil.rmtree(user_data, ignore_errors=True)
+
+
+def test_validate_circuit_studio_drag_and_drop_interactions():
+    """
+    Automated Regression Test for Circuit Studio Drag-and-Drop:
+      1. Drag H from palette to empty cell -> gate placed.
+      2. Drag placed H to another cell -> gate moves.
+      3. Click palette X, then click empty cell -> gate placed.
+      4. Click placed X -> removes gate.
+      5. Presets, +Qubit, and Clear functions continue working.
+      6. Verifies zero console errors.
+    """
+    import subprocess
+    import time
+    import threading
+    import tempfile
+    import shutil
+    import json
+    from pathlib import Path
+    import urllib.request
+    import asyncio
+    import websockets
+    import uvicorn
+    from backend.api.main import app
+
+    port = 8000
+    server = None
+    try:
+        urllib.request.urlopen("http://127.0.0.1:8000/api/activities", timeout=1.0)
+    except Exception:
+        port = 8773
+        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+        server = uvicorn.Server(config)
+        t = threading.Thread(target=server.run, daemon=True)
+        t.start()
+        time.sleep(1.0)
+
+    user_data = Path(tempfile.mkdtemp(prefix="edge_user_data_cs_dnd_"))
+    edge_exe = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+
+    async def run_dnd_suite():
+        cmd = [
+            edge_exe,
+            "--headless=new",
+            "--remote-debugging-port=9333",
+            "--window-size=1366,768",
+            f"--user-data-dir={user_data}",
+            f"http://127.0.0.1:{port}/",
+        ]
+        proc = subprocess.Popen(cmd)
+        try:
+            tabs = []
+            for _ in range(30):
+                await asyncio.sleep(0.3)
+                try:
+                    with urllib.request.urlopen("http://127.0.0.1:9333/json") as resp:
+                        tabs = json.loads(resp.read().decode())
+                        if tabs:
+                            break
+                except Exception:
+                    pass
+
+            page_tab = next((t for t in tabs if str(port) in t.get("url", "") or t.get("type") == "page"), tabs[0])
+            ws_url = page_tab["webSocketDebuggerUrl"]
+
+            async with websockets.connect(ws_url) as ws:
+                req_id = 1
+                pending_requests = {}
+                console_errors = []
+
+                async def reader():
+                    while True:
+                        try:
+                            raw = await ws.recv()
+                            msg = json.loads(raw)
+                            if "id" in msg:
+                                fut = pending_requests.pop(msg["id"], None)
+                                if fut and not fut.done():
+                                    fut.set_result(msg)
+                            elif msg.get("method") == "Console.messageAdded":
+                                lvl = msg["params"]["message"]["level"]
+                                text = msg["params"]["message"]["text"]
+                                if lvl in ["error"]:
+                                    console_errors.append(f"[{lvl}] {text}")
+                        except Exception:
+                            break
+
+                asyncio.create_task(reader())
+
+                async def send(method, params=None):
+                    nonlocal req_id
+                    my_id = req_id
+                    req_id += 1
+                    fut = asyncio.get_running_loop().create_future()
+                    pending_requests[my_id] = fut
+                    await ws.send(json.dumps({"id": my_id, "method": method, "params": params or {}}))
+                    return await fut
+
+                await send("Runtime.enable")
+                await send("Page.enable")
+                await send("Console.enable")
+                await send("Page.navigate", {"url": f"http://127.0.0.1:{port}/"})
+
+                for _ in range(50):
+                    chk = await send("Runtime.evaluate", {
+                        "expression": "typeof window.clearStudioCircuit === 'function'",
+                        "returnByValue": True
+                    })
+                    if chk.get("result", {}).get("result", {}).get("value") is True:
+                        break
+                    await asyncio.sleep(0.2)
+
+                # 1. Palette Drag H -> (0, 2)
+                res_a = await send("Runtime.evaluate", {
+                    "expression": """
+                    (() => {
+                        window.clearStudioCircuit();
+                        const btnH = Array.from(document.querySelectorAll('.gate-btn')).find(b => b.textContent.trim() === 'H');
+                        const slot02 = document.querySelector(".grid-slot[data-qubit='0'][data-column='2']");
+                        if (!btnH || !slot02) return { error: "missing" };
+
+
+                        const dt = new DataTransfer();
+                        const eStart = new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt });
+                        btnH.dispatchEvent(eStart);
+
+                        const eOver = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt });
+                        slot02.dispatchEvent(eOver);
+
+                        const eDrop = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt });
+                        slot02.dispatchEvent(eDrop);
+
+                        const placed = document.querySelector(".grid-slot[data-qubit='0'][data-column='2'] .placed-gate");
+                        return { placed: placed ? placed.textContent.trim() : null };
+                    })()
+                    """,
+                    "returnByValue": True
+                })
+                val_a = res_a.get("result", {}).get("result", {}).get("value")
+                assert val_a and val_a.get("placed") == "H"
+
+                # 2. Drag placed H from (0, 2) to (1, 3)
+                res_b = await send("Runtime.evaluate", {
+                    "expression": """
+                    (() => {
+                        const gateH = document.querySelector(".grid-slot[data-qubit='0'][data-column='2'] .placed-gate");
+                        const slot13 = document.querySelector(".grid-slot[data-qubit='1'][data-column='3']");
+                        if (!gateH || !slot13) return { error: "missing" };
+
+                        const dt = new DataTransfer();
+                        const eStart = new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt });
+                        gateH.dispatchEvent(eStart);
+
+                        const eOver = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt });
+                        slot13.dispatchEvent(eOver);
+
+                        const eDrop = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt });
+                        slot13.dispatchEvent(eDrop);
+
+                        const oldSlot = document.querySelector(".grid-slot[data-qubit='0'][data-column='2'] .placed-gate");
+                        const newSlot = document.querySelector(".grid-slot[data-qubit='1'][data-column='3'] .placed-gate");
+                        return {
+                            oldGate: oldSlot ? oldSlot.textContent.trim() : null,
+                            newGate: newSlot ? newSlot.textContent.trim() : null
+                        };
+                    })()
+                    """,
+                    "returnByValue": True
+                })
+                val_b = res_b.get("result", {}).get("result", {}).get("value")
+                assert val_b and val_b.get("oldGate") is None
+                assert val_b.get("newGate") == "H"
+
+                # 3. Click-to-place X -> (0, 1)
+                res_c = await send("Runtime.evaluate", {
+                    "expression": """
+                    (() => {
+                        const btnX = Array.from(document.querySelectorAll('.gate-btn')).find(b => b.textContent.trim() === 'X');
+                        if (!btnX) return { error: "missing" };
+                        btnX.click();
+
+                        const slot01 = document.querySelector(".grid-slot[data-qubit='0'][data-column='1']");
+                        if (!slot01) return { error: "missing" };
+                        slot01.click();
+
+                        const placedX = document.querySelector(".grid-slot[data-qubit='0'][data-column='1'] .placed-gate");
+                        return { placedX: placedX ? placedX.textContent.trim() : null };
+                    })()
+                    """,
+                    "returnByValue": True
+                })
+                val_c = res_c.get("result", {}).get("result", {}).get("value")
+                assert val_c and val_c.get("placedX") == "X"
+
+                # 4. Click placed X -> remove
+                res_d = await send("Runtime.evaluate", {
+                    "expression": """
+                    (() => {
+                        const slot01 = document.querySelector(".grid-slot[data-qubit='0'][data-column='1']");
+                        if (!slot01) return { error: "missing" };
+                        slot01.click();
+
+                        const remaining = document.querySelector(".grid-slot[data-qubit='0'][data-column='1'] .placed-gate");
+                        return { remaining: remaining ? remaining.textContent.trim() : null };
+                    })()
+                    """,
+                    "returnByValue": True
+                })
+                val_d = res_d.get("result", {}).get("result", {}).get("value")
+                assert val_d and val_d.get("remaining") is None
+
+                # 5. Presets, controls, and zero console errors
+                res_e = await send("Runtime.evaluate", {
+                    "expression": """
+                    (() => {
+                        window.loadCircuitPreset('grover_2q');
+                        const presetCount = document.querySelectorAll('.placed-gate').length;
+                        window.addStudioQubit();
+                        const wiresAfterAdd = document.querySelectorAll('.wire-row').length;
+                        window.clearStudioCircuit();
+                        const gatesAfterClear = document.querySelectorAll('.placed-gate').length;
+                        window.loadCircuitPreset('grover_2q');
+                        return { presetCount, wiresAfterAdd, gatesAfterClear };
+                    })()
+                    """,
+                    "returnByValue": True
+                })
+                val_e = res_e.get("result", {}).get("result", {}).get("value")
+                assert val_e and val_e.get("presetCount") == 9
+                assert val_e.get("gatesAfterClear") == 0
+                assert len(console_errors) == 0
+        finally:
+            proc.terminate()
+            proc.wait(timeout=5)
+
+    try:
+        asyncio.run(run_dnd_suite())
+    finally:
+        if server:
+            server.should_exit = True
+        shutil.rmtree(user_data, ignore_errors=True)
