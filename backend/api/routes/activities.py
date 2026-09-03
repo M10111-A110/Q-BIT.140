@@ -4,6 +4,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.adaptive import (
+    LearnerEvidence,
     LearnerModel,
     LearnerRepository,
     PersistenceError,
@@ -12,17 +13,25 @@ from backend.adaptive import (
     get_activity,
     list_activities,
 )
+from backend.adaptive.diagnostics import Diagnostic
 from backend.quantum import QuantumExperiment, run_experiment
 
 from ..dependencies import get_learner_model, get_learner_repository
 from ..schemas import (
     ActivityDetailResponse,
     ActivitySummary,
+    DiagnosticQuestionItem,
+    DiagnosticQuestionResult,
+    DiagnosticReadinessResponse,
+    DiagnosticSubmitRequest,
+    DiagnosticSubmitResponse,
+    LearnerStateResponse,
     SubmissionRequest,
     SubmissionResponse,
 )
 
 router = APIRouter(tags=["activities"])
+
 
 
 @router.get("/activities", response_model=list[ActivitySummary])
@@ -174,4 +183,165 @@ def submit_activity_attempt(
         evidence=evidence.to_dict(),
         learner_state=state.to_dict(),
         adaptive_decision=decision.to_dict(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Diagnostic Readiness Check & Learner State Endpoints (Phase 8 & 4)
+# ---------------------------------------------------------------------------
+
+_diagnostic = Diagnostic()
+
+DIAGNOSTIC_ITEMS = [
+    ("diag_qubits", "Qubits", 0),
+    ("diag_superposition", "Superposition", 0),
+    ("diag_measurement", "Measurement", 0),
+    ("diag_quantum_gates", "Quantum Gates", 0),
+]
+
+
+@router.get("/diagnostic/readiness_check", response_model=DiagnosticReadinessResponse)
+def get_diagnostic_readiness_check() -> DiagnosticReadinessResponse:
+    """
+    Retrieve concise diagnostic questions across foundational quantum concepts
+    (Qubits, Superposition, Measurement, Gates) from the authoritative dataset.
+    """
+    items: list[DiagnosticQuestionItem] = []
+    for q_id, topic, q_idx in DIAGNOSTIC_ITEMS:
+        qs = _diagnostic.get_questions(topic)
+        q = qs[q_idx]
+        items.append(
+            DiagnosticQuestionItem(
+                id=q_id,
+                question_id=q_id,
+                topic=q.topic,
+                concept_id=q.concept_id,
+                question=q.question,
+                prompt=q.question,
+                options=q.options,
+                difficulty=q.difficulty,
+            )
+        )
+
+
+    return DiagnosticReadinessResponse(questions=items)
+
+
+@router.post("/diagnostic/submit", response_model=DiagnosticSubmitResponse)
+def submit_diagnostic_readiness_check(
+    req: DiagnosticSubmitRequest,
+    repo: LearnerRepository = Depends(get_learner_repository),
+    model: LearnerModel = Depends(get_learner_model),
+) -> DiagnosticSubmitResponse:
+    """
+    Evaluate diagnostic readiness check responses:
+      1. Compares learner answers against authoritative answer keys.
+      2. Generates real LearnerEvidence with evidence_type='diagnostic_response'.
+      3. Ingests evidence into persistent LearnerState via authoritative M2 model.
+      4. Saves updated state to repository.
+      5. Returns evaluated outcome, question breakdown, and M2 adaptive recommendation.
+    """
+    try:
+        state = repo.get(req.learner_id)
+    except PersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Learner state persistence service is currently unavailable",
+        ) from exc
+
+    results: list[DiagnosticQuestionResult] = []
+    correct_count = 0
+    last_decision = None
+
+    for q_id, topic, q_idx in DIAGNOSTIC_ITEMS:
+        qs = _diagnostic.get_questions(topic)
+        q = qs[q_idx]
+
+        chosen = str(req.answers.get(q_id, "")).strip().upper()
+        is_correct = chosen == q.correct_answer
+        if is_correct:
+            correct_count += 1
+
+        prior_attempts = [e for e in state.evidence_history if e.get("activity_id") == q_id]
+        attempt_num = len(prior_attempts) + 1
+
+        evidence = LearnerEvidence(
+            learner_id=req.learner_id,
+            activity_id=q_id,
+            concept_id=q.concept_id,
+            learner_response=chosen or "unanswered",
+            is_correct=is_correct,
+            attempt_number=attempt_num,
+            evidence_type="diagnostic_response",
+            evidence_source="learner",
+            evaluation_details={
+                "question": q.question,
+                "chosen": chosen,
+                "correct_answer": q.correct_answer,
+                "explanation": q.explanation,
+                "topic": q.topic,
+            },
+        )
+
+        last_decision = model.record_evidence(evidence, state)
+
+        results.append(
+            DiagnosticQuestionResult(
+                question_id=q_id,
+                topic=q.topic,
+                concept_id=q.concept_id,
+                question=q.question,
+                chosen=chosen,
+                correct_answer=q.correct_answer,
+                is_correct=is_correct,
+                explanation=q.explanation,
+                evidence_id=evidence.evidence_id,
+            )
+        )
+
+    try:
+        repo.save(state)
+    except PersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to persist updated learner state to storage",
+        ) from exc
+
+    score = round(correct_count / len(DIAGNOSTIC_ITEMS), 4) if DIAGNOSTIC_ITEMS else 0.0
+
+    return DiagnosticSubmitResponse(
+        learner_id=req.learner_id,
+        score=score,
+        total_questions=len(DIAGNOSTIC_ITEMS),
+        correct_count=correct_count,
+        results=results,
+        learner_state=state.to_dict(),
+        adaptive_decision=last_decision.to_dict() if last_decision else {},
+    )
+
+
+@router.get("/learner/{learner_id}/state", response_model=LearnerStateResponse)
+def get_learner_state(
+    learner_id: str,
+    repo: LearnerRepository = Depends(get_learner_repository),
+) -> LearnerStateResponse:
+    """
+    Retrieve authoritative persistent learner state and complete evidence history.
+    """
+    try:
+        state = repo.get(learner_id)
+    except PersistenceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Learner state persistence service is currently unavailable",
+        ) from exc
+
+    return LearnerStateResponse(
+        user_id=state.user_id,
+        concept_scores=state.concept_scores,
+        attempts=state.attempts,
+        errors=state.errors,
+        score_history=state.score_history,
+        evidence_history=state.evidence_history,
+        gap_inferences=state.gap_inferences,
     )

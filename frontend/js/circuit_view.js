@@ -24,6 +24,25 @@ export class CircuitStudio {
         this.selectedTool = null;
         this.onCircuitChange = options.onCircuitChange || null;
         this.onGateSelect = options.onGateSelect || null;
+        this.initPaletteDrag();
+    }
+
+    initPaletteDrag() {
+        if (typeof document === "undefined") return;
+        document.querySelectorAll(".gate-btn").forEach(btn => {
+            btn.setAttribute("draggable", "true");
+            btn.ondragstart = (e) => {
+                const gateType = btn.textContent.trim();
+                const payload = JSON.stringify({ source: "palette", type: gateType });
+                e.dataTransfer.setData("application/json", payload);
+                e.dataTransfer.setData("text/plain", payload);
+                e.dataTransfer.effectAllowed = "copy";
+                btn.classList.add("gate-dragging");
+            };
+            btn.ondragend = () => {
+                btn.classList.remove("gate-dragging");
+            };
+        });
     }
 
     setTool(tool) {
@@ -115,10 +134,59 @@ export class CircuitStudio {
                     const gateEl = document.createElement("div");
                     gateEl.className = `placed-gate ${gate.type === 'CZ' ? 'cz-gate' : ''} ${gate.type === 'M' ? 'm-gate' : ''}`;
                     gateEl.textContent = gate.type;
-                    gateEl.title = `${gate.type} Gate - Click to remove`;
+                    gateEl.title = `${gate.type} Gate — Drag to move, or click to remove`;
+                    gateEl.setAttribute("draggable", "true");
+
+                    gateEl.ondragstart = (e) => {
+                        e.stopPropagation();
+                        const payload = JSON.stringify({
+                            source: "placed",
+                            id: gate.id,
+                            type: gate.type,
+                            fromQubit: q,
+                            fromColumn: c,
+                        });
+                        e.dataTransfer.setData("application/json", payload);
+                        e.dataTransfer.setData("text/plain", payload);
+                        e.dataTransfer.effectAllowed = "move";
+                        gateEl.classList.add("gate-dragging");
+                    };
+
+                    gateEl.ondragend = () => {
+                        gateEl.classList.remove("gate-dragging");
+                    };
+
                     slot.appendChild(gateEl);
                 }
 
+                // Drag over slot feedback
+                slot.ondragover = (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    slot.classList.add("drag-over");
+                };
+
+                slot.ondragleave = () => {
+                    slot.classList.remove("drag-over");
+                };
+
+                slot.ondrop = (e) => {
+                    e.preventDefault();
+                    slot.classList.remove("drag-over");
+
+                    let payload = null;
+                    try {
+                        const raw = e.dataTransfer.getData("application/json") || e.dataTransfer.getData("text/plain");
+                        if (raw) payload = JSON.parse(raw);
+                    } catch {
+                        return;
+                    }
+                    if (!payload || !payload.type) return;
+
+                    this.handleDrop(payload, q, c);
+                };
+
+                // Click-to-place or click-to-remove
                 slot.onclick = () => this.handleSlotClick(q, c);
                 line.appendChild(slot);
             }
@@ -126,6 +194,52 @@ export class CircuitStudio {
             row.appendChild(line);
             this.container.appendChild(row);
         }
+    }
+
+    handleDrop(payload, toQubit, toColumn) {
+        if (toQubit < 0 || toQubit >= this.numQubits || toColumn < 0 || toColumn >= this.numColumns) {
+            return;
+        }
+
+        if (payload.source === "palette") {
+            const existingIdx = this.gates.findIndex(g => g.qubit === toQubit && g.column === toColumn);
+            if (existingIdx >= 0) {
+                this.gates.splice(existingIdx, 1);
+            }
+            const newGate = {
+                id: Date.now(),
+                type: payload.type,
+                qubit: toQubit,
+                column: toColumn,
+            };
+            this.gates.push(newGate);
+            if (this.onGateSelect) this.onGateSelect(newGate);
+        } else if (payload.source === "placed") {
+            const fromQ = payload.fromQubit;
+            const fromC = payload.fromColumn;
+            if (fromQ === toQubit && fromC === toColumn) return;
+
+            const oldIdx = this.gates.findIndex(g => g.qubit === fromQ && g.column === fromC);
+            if (oldIdx >= 0) {
+                this.gates.splice(oldIdx, 1);
+            }
+            const targetIdx = this.gates.findIndex(g => g.qubit === toQubit && g.column === toColumn);
+            if (targetIdx >= 0) {
+                this.gates.splice(targetIdx, 1);
+            }
+
+            const movedGate = {
+                id: payload.id || Date.now(),
+                type: payload.type,
+                qubit: toQubit,
+                column: toColumn,
+            };
+            this.gates.push(movedGate);
+            if (this.onGateSelect) this.onGateSelect(movedGate);
+        }
+
+        this.render();
+        if (this.onCircuitChange) this.onCircuitChange(this.gates);
     }
 
     handleSlotClick(q, c) {

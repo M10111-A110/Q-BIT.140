@@ -34,71 +34,71 @@ export function formatPercentage(value) {
 export function formatSufficiencyLabel(suff) {
     switch (suff) {
         case "sufficient_for_targeted_inference":
-            return "Sufficient for Targeted Inference";
+            return "Strong enough to guide targeted practice";
         case "sufficient_for_improvement_observation":
-            return "Sufficient for Improvement Observation";
+            return "Strong enough to confirm concept improvement";
         case "sufficient_for_mastery":
-            return "Sufficient for Stable Mastery";
+            return "Strong enough to confirm stable mastery";
         case "sufficient_for_observation":
-            return "Sufficient for Initial Observation";
+            return "Strong enough to guide the next step";
         case "insufficient":
         default:
-            return "Insufficient (Gathering Observations)";
+            return "Gathering more attempts to confirm pattern";
     }
 }
 
 /**
- * Format decision trigger key to learner-readable description.
+ * Format decision trigger key to learner/judge-readable description.
  * @param {string} trigger
  * @returns {string}
  */
 export function formatTriggerLabel(trigger) {
     switch (trigger) {
-        case "single_prediction_mismatch":
-            return "Single Prediction Mismatch";
-        case "repeated_prediction_error":
-            return "Repeated Prediction Errors";
-        case "prerequisite_bottleneck_error":
-            return "Prerequisite Bottleneck Detected";
-        case "post_intervention_recovery":
-            return "Post-Intervention Recovery & Improvement";
-        case "consecutive_mastery_success":
-            return "Consecutive Successful Predictions";
         case "correct_prediction_advancement":
-            return "Correct Prediction Demonstration";
+            return "You predicted correctly, so the system is ready to increase the challenge.";
+        case "consecutive_mastery_success":
+            return "Consistent correct answers demonstrate mastery; advancing to the next challenge.";
+        case "single_prediction_mismatch":
+            return "First attempt differed from quantum measurement; gathering another observation.";
+        case "repeated_prediction_error":
+            return "Multiple attempts show a concept gap, so we're routing you to targeted practice.";
+        case "prerequisite_bottleneck_error":
+            return "Foundational prerequisite gap detected, so we're recommending prerequisite review.";
+        case "post_intervention_recovery":
+            return "Concept recovered after review; returning to main track.";
         case "prerequisite_mastery_check":
-            return "Prerequisite Mastery Incomplete";
+            return "Prerequisite check requires review before proceeding.";
         default:
-            return String(trigger || "Default Routing").replace(/_/g, " ");
+            return String(trigger || "Standard adaptive evaluation").replace(/_/g, " ");
     }
 }
 
 /**
- * Format M2 learner-state hypothesis into clean human description.
+ * Format M2 learner-state hypothesis into clean, natural human description.
  * @param {string} hypothesis
  * @returns {string}
  */
 export function formatHypothesisLabel(hypothesis) {
-    if (!hypothesis || hypothesis === "unassessed") return "Unassessed Baseline";
+    if (!hypothesis || hypothesis === "unassessed") return "Initial baseline — completing first challenges";
     if (hypothesis.startsWith("possible_") && hypothesis.endsWith("_difficulty")) {
         const topic = hypothesis.replace(/^possible_/, "").replace(/_difficulty$/, "").replace(/_/g, " ");
-        return `Possible difficulty with ${topic}`;
+        return `Reviewing foundations of ${topic}`;
     }
     if (hypothesis.startsWith("preliminary_difficulty_observation_in_")) {
         const topic = hypothesis.replace(/^preliminary_difficulty_observation_in_/, "").replace(/_/g, " ");
-        return `Preliminary difficulty observation in ${topic}`;
+        return `Noticing initial questions around ${topic}`;
     }
     if (hypothesis.startsWith("post_intervention_improvement_in_")) {
         const topic = hypothesis.replace(/^post_intervention_improvement_in_/, "").replace(/_/g, " ");
-        return `Post-intervention improvement in ${topic}`;
+        return `Showing clear improvement in ${topic}`;
     }
     if (hypothesis.startsWith("consistent_mastery_in_")) {
         const topic = hypothesis.replace(/^consistent_mastery_in_/, "").replace(/_/g, " ");
-        return `Consistent mastery in ${topic}`;
+        return `Comfortable and confident in ${topic}`;
     }
     if (hypothesis.startsWith("demonstrated_understanding_in_")) {
         const topic = hypothesis.replace(/^demonstrated_understanding_in_/, "").replace(/_/g, " ");
-        return `Demonstrated understanding in ${topic}`;
+        return `Understands core principles of ${topic}`;
     }
     return String(hypothesis).replace(/_/g, " ");
 }
@@ -284,10 +284,10 @@ export function computeBadgeMetrics(state = {}, activities = []) {
     const totalCount = activities.length || 4;
 
     const conceptVals = Object.values(conceptScores);
-    const avgMastery = conceptVals.length > 0 ? (conceptVals.reduce((a, b) => a + Number(b), 0) / conceptVals.length) : 0.5;
-    const points = Math.round(avgMastery * 500 + completedCount * 125);
+    const avgMastery = conceptVals.length > 0 ? (conceptVals.reduce((a, b) => a + Number(b), 0) / conceptVals.length) : 0.0;
+    const points = completedCount > 0 ? Math.round(avgMastery * 500 + completedCount * 125) : 0;
     const masteryPct = Math.round(avgMastery * 100);
-    const streak = Math.max(1, completedCount);
+    const streak = completedCount > 0 ? completedCount : 0;
 
     return {
         streak,
@@ -298,6 +298,7 @@ export function computeBadgeMetrics(state = {}, activities = []) {
         accuracyPct,
     };
 }
+
 
 /**
  * Load local learner profile preferences from browser localStorage.

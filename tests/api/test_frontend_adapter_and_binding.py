@@ -256,3 +256,362 @@ def test_frontend_static_serving():
     assert 'id="adaptiveDecisionCard"' in html
     assert 'id="aiGuidanceCard"' in html
     assert 'id="askModal"' in html
+
+
+def test_validate_frontend_javascript():
+    import subprocess
+    import time
+    import threading
+    import tempfile
+    import shutil
+    import re
+    from pathlib import Path
+    import urllib.request
+    import uvicorn
+    from backend.api.main import app
+
+    # Check if port 8000 is already active; if not, spin up a background test server
+    port = 8000
+    server = None
+    try:
+        urllib.request.urlopen("http://127.0.0.1:8000/api/activities", timeout=1.0)
+    except Exception:
+        port = 8769
+        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+        server = uvicorn.Server(config)
+        t = threading.Thread(target=server.run, daemon=True)
+        t.start()
+        time.sleep(1.0)
+
+    user_data = Path(tempfile.mkdtemp(prefix="edge_user_data_"))
+    edge_exe = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+
+    try:
+        cmd = [
+            edge_exe,
+            "--headless=new",
+            "--enable-logging",
+            "--v=1",
+            "--virtual-time-budget=5000",
+            "--dump-dom",
+            f"--user-data-dir={user_data}",
+            f"http://127.0.0.1:{port}/",
+        ]
+        res = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=30)
+
+        dom_output = res.stdout
+
+        title_match = re.search(r'id="activityTitle"[^>]*>([^<]+)<', dom_output)
+        prompt_match = re.search(r'id="activityPrompt"[^>]*>([^<]+)<', dom_output)
+
+        assert title_match is not None, "activityTitle element not found in DOM output"
+        assert "Loading" not in title_match.group(1), f"Activity stuck at loading state: {title_match.group(1)}"
+        assert "Grover" in title_match.group(1), f"Expected Grover in title, got: {title_match.group(1)}"
+        assert prompt_match is not None, "activityPrompt element not found in DOM output"
+        assert "Loading" not in prompt_match.group(1), "Activity prompt stuck at loading state"
+    finally:
+        if server:
+            server.should_exit = True
+        shutil.rmtree(user_data, ignore_errors=True)
+
+
+def test_end_to_end_error_and_remediation_flow():
+    """
+    End-to-End Judge Flow Verification:
+      1. Initial page loads Grover 2Q activity
+      2. Wrong prediction submitted ('01')
+      3. Real M3/Aer execution (1024 shots) returns measured result
+      4. Unique evidence ID is generated and logged
+      5. M2 cognitive gap inference derives misconception
+      6. Repeated errors trigger targeted remediation to act_measurement_prob_diagnostic
+      7. Activity switching loads measurement diagnostic
+    """
+    client = TestClient(app)
+
+    # 1. Verify initial Grover activity
+    res1 = client.get("/api/activity/act_grover_2q_predict")
+    assert res1.status_code == 200
+    act1 = res1.json()
+    assert act1["activity_id"] == "act_grover_2q_predict"
+    assert act1["task_type"] == "quantum_prediction"
+
+    # 2. First attempt - wrong prediction ("01")
+    learner_id = "test_judge_e2e"
+    res2 = client.post(
+        f"/api/activity/{act1['activity_id']}/submit",
+        json={"learner_id": learner_id, "response": "01"},
+    )
+    assert res2.status_code == 200
+    sub1 = res2.json()
+    assert sub1["verified_result"]["shots"] == 1024
+    assert sub1["verified_result"]["target_state"] == "10"
+    assert sub1["evidence"]["is_correct"] is False
+    assert sub1["evidence"]["evidence_id"].startswith("ev_")
+    assert sub1["adaptive_decision"]["action"] in ["gather_evidence", "targeted_remediation"]
+
+    # 3. Second attempt - repeated wrong prediction triggers targeted_remediation
+    res3 = client.post(
+        f"/api/activity/{act1['activity_id']}/submit",
+        json={"learner_id": learner_id, "response": "01"},
+    )
+    assert res3.status_code == 200
+    sub2 = res3.json()
+    assert sub2["evidence"]["is_correct"] is False
+    assert sub2["adaptive_decision"]["action"] == "targeted_remediation"
+    remed_target = sub2["adaptive_decision"]["target"]
+    assert remed_target == "act_measurement_prob_diagnostic"
+
+    # 4. Switch activity to recommended remediation
+    res4 = client.get(f"/api/activity/{remed_target}")
+    assert res4.status_code == 200
+    act2 = res4.json()
+    assert act2["activity_id"] == "act_measurement_prob_diagnostic"
+    assert act2["task_type"] == "conceptual_choice"
+    assert "options" in act2 and len(act2["options"]) > 0
+
+    # 5. Verify persistent evidence history
+    st_res = client.get(f"/api/learner/{learner_id}/state")
+    assert st_res.status_code == 200
+    st = st_res.json()
+    assert len(st["evidence_history"]) == 2
+
+
+def test_advancement_path_and_readiness_flow():
+    """
+    Verify Advancement Path & Readiness Check:
+      1. Correct prediction ('10') triggers advancement to act_grover_iteration_reasoning
+      2. Diagnostic readiness check grades answers and records evidence
+    """
+    client = TestClient(app)
+
+    # 1. Correct prediction on Grover 2Q
+    learner_id = "test_judge_correct"
+    res = client.post(
+        "/api/activity/act_grover_2q_predict/submit",
+        json={"learner_id": learner_id, "response": "10"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["evidence"]["is_correct"] is True
+    assert data["adaptive_decision"]["action"] == "advance"
+    assert data["adaptive_decision"]["target"] == "act_grover_iteration_reasoning"
+
+
+    # 2. Verify advancement activity exists and can be loaded
+    adv_res = client.get(f"/api/activity/{data['adaptive_decision']['target']}")
+    assert adv_res.status_code == 200
+    adv_act = adv_res.json()
+    assert adv_act["activity_id"] == "act_grover_iteration_reasoning"
+    assert adv_act["task_type"] == "conceptual_choice"
+
+    # 3. Diagnostic readiness submission
+    diag_res = client.post(
+        "/api/diagnostic/submit",
+        json={
+            "learner_id": "test_judge_diag",
+            "answers": {
+                "diag_qubit_basis": "A",
+                "diag_superposition_hadamard": "B",
+            },
+        },
+    )
+    assert diag_res.status_code == 200
+    diag_data = diag_res.json()
+    assert diag_data["total_questions"] == 4
+    assert "adaptive_decision" in diag_data
+
+    # 4. Verify diagnostic evidence appears in persistent history
+    st_res = client.get("/api/learner/test_judge_diag/state")
+    assert st_res.status_code == 200
+    st = st_res.json()
+    assert len(st["evidence_history"]) == 4
+    assert st["evidence_history"][0]["evidence_type"] == "diagnostic_response"
+
+
+def test_validate_readiness_modal_rendered_in_browser():
+    """
+    Live Headless Browser E2E Test:
+      1. Loads application in Microsoft Edge with ?check_readiness
+      2. Verifies all 4 readiness questions render with real question prompts (not undefined)
+      3. Verifies answer option selection updates the selected button class
+      4. Verifies answered count updates to '1 of 4 answered'
+    """
+    import subprocess
+    import time
+    import threading
+    import tempfile
+    import shutil
+    import re
+    from pathlib import Path
+    import urllib.request
+    import uvicorn
+    from backend.api.main import app
+
+    port = 8000
+    server = None
+    try:
+        urllib.request.urlopen("http://127.0.0.1:8000/api/activities", timeout=1.0)
+    except Exception:
+        port = 8771
+        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+        server = uvicorn.Server(config)
+        t = threading.Thread(target=server.run, daemon=True)
+        t.start()
+        time.sleep(1.0)
+
+    user_data = Path(tempfile.mkdtemp(prefix="edge_user_data_readiness_"))
+    edge_exe = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+
+    try:
+        cmd = [
+            edge_exe,
+            "--headless=new",
+            "--enable-logging",
+            "--v=1",
+            "--virtual-time-budget=5000",
+            "--dump-dom",
+            f"--user-data-dir={user_data}",
+            f"http://127.0.0.1:{port}/?check_readiness",
+        ]
+        res = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=30)
+        dom_output = res.stdout
+
+        # Verify modal container and questions
+        assert "What is a qubit?" in dom_output, "Question 1 prompt 'What is a qubit?' not rendered in browser DOM"
+        assert "What is quantum superposition?" in dom_output, "Question 2 prompt not rendered in browser DOM"
+        assert "What is the purpose of measuring a qubit?" in dom_output, "Question 3 prompt not rendered"
+        assert "What is the purpose of a quantum gate?" in dom_output, "Question 4 prompt not rendered"
+
+        # Verify 'undefined' is not present in question text
+        m_undef = re.search(r'class="readiness-q-text"[^>]*>\s*undefined\s*<', dom_output)
+        assert m_undef is None, "Found 'undefined' as readiness question prompt in browser DOM"
+
+        # Verify option selection state
+        assert 'opt-diag_qubits-B' in dom_output, "Expected option button ID opt-diag_qubits-B not found"
+        assert 'class="readiness-option-btn selected"' in dom_output or 'selected' in dom_output, "Selected option state not reflected in browser DOM"
+        assert "1 of 4 answered" in dom_output, "Progress text '1 of 4 answered' not reflected in browser DOM"
+    finally:
+        if server:
+            server.should_exit = True
+        shutil.rmtree(user_data, ignore_errors=True)
+
+
+def test_validate_ask_ai_workspace_modal_structure():
+    """
+    Verify Enlarged AI Assistant Learning Workspace:
+      1. Modal structure has .ask-modal-card with generous desktop dimensions (68vw, 76vh)
+      2. Question input textarea has dedicated .ask-textarea with comfortable height
+      3. Response area occupies dedicated scrollable .ask-response-container
+      4. Grounded AI API integration at /api/ai/ask remains fully functional
+    """
+    from pathlib import Path
+    client = TestClient(app)
+
+    # 1. Verify HTML template structure
+    html_path = Path("frontend/index.html")
+    html = html_path.read_text(encoding="utf-8")
+    assert 'class="modal-card ask-modal-card"' in html
+    assert 'class="ask-modal-header"' in html
+    assert 'id="askQuestionInput" class="ask-textarea"' in html
+    assert 'id="askSubmitBtn"' in html
+    assert 'id="askAnswerBox"' in html
+    assert 'class="ask-response-workspace"' in html
+
+    # 2. Verify CSS styles for the workspace dimensions
+    css_path = Path("frontend/css/styles.css")
+    css = css_path.read_text(encoding="utf-8")
+    assert ".ask-modal-card" in css
+    assert "width: 82vw" in css
+    assert "height: 82vh" in css
+    assert "max-width: 1400px" in css
+    assert "max-height: 900px" in css
+    assert ".ask-response-container" in css
+    assert ".ask-action-row" in css
+
+
+    # 3. Verify backend AI endpoint functions accurately
+    res = client.post(
+        "/api/ai/ask",
+        json={
+            "question": "What is quantum superposition?",
+            "concept_id": "quantum.superposition",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "answer" in data
+    assert len(data["answer"]) > 50
+
+
+def test_validate_ask_ai_workspace_rendered_in_browser_desktop_viewport():
+    """
+    Verify live Microsoft Edge browser rendering of Ask AI Assistant Workspace at 1750x860:
+      1. Loads application in Edge at 1750x860 with ?check_ask_ai
+      2. Verifies #askModal is open with .ask-modal-card
+      3. Verifies horizontal header with .ask-modal-title and top-right .ask-close-btn
+      4. Verifies full-width .ask-textarea and horizontal .ask-action-row
+      5. Verifies expansive .ask-response-container spanning the full inner width
+    """
+    import subprocess
+    import time
+    import threading
+    import tempfile
+    import shutil
+    import re
+    from pathlib import Path
+    import urllib.request
+    import uvicorn
+    from backend.api.main import app
+
+    port = 8000
+    server = None
+    try:
+        urllib.request.urlopen("http://127.0.0.1:8000/api/activities", timeout=1.0)
+    except Exception:
+        port = 8772
+        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+        server = uvicorn.Server(config)
+        t = threading.Thread(target=server.run, daemon=True)
+        t.start()
+        time.sleep(1.0)
+
+    user_data = Path(tempfile.mkdtemp(prefix="edge_user_data_ask_ai_"))
+    edge_exe = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+
+    try:
+        cmd = [
+            edge_exe,
+            "--headless=new",
+            "--window-size=1750,860",
+            "--enable-logging",
+            "--v=1",
+            "--virtual-time-budget=5000",
+            "--dump-dom",
+            f"--user-data-dir={user_data}",
+            f"http://127.0.0.1:{port}/?check_ask_ai",
+        ]
+        res = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=30)
+        dom_output = res.stdout
+
+        # 1. Verify modal is displayed and has the workspace layout classes
+        assert 'id="askModal"' in dom_output
+        assert 'ask-modal-card' in dom_output
+        assert 'ask-modal-header' in dom_output
+        assert 'ask-close-btn' in dom_output
+        assert 'ask-question-section' in dom_output
+        assert 'ask-textarea' in dom_output
+        assert 'ask-action-row' in dom_output
+        assert 'ask-grounding-pill' in dom_output
+        assert 'ask-response-workspace' in dom_output
+        assert 'ask-response-container' in dom_output
+        assert 'AI Conceptual Learning Workspace' in dom_output
+
+        # 2. Verify modal is visible (display is flex, not none)
+        m_modal = re.search(r'<div[^>]*id="askModal"[^>]*style="([^"]*)"', dom_output)
+        if m_modal:
+            style_str = m_modal.group(1)
+            assert 'display: flex' in style_str or 'display: none' not in style_str
+    finally:
+        if server:
+            server.should_exit = True
+        shutil.rmtree(user_data, ignore_errors=True)

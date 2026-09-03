@@ -12,8 +12,245 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 
-    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/styles.css?v=2.2">
+    <style id="askModalEmbeddedStyles">
+        .ask-modal-card {
+            width: 82vw !important;
+            max-width: 1400px !important;
+            min-width: 680px !important;
+            height: 82vh !important;
+            max-height: 900px !important;
+            min-height: 560px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 16px !important;
+            padding: 24px 32px !important;
+            background: var(--glass-2) !important;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            border: 1px solid var(--panel-border-hi) !important;
+            border-radius: 18px !important;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 36px rgba(6, 182, 212, 0.12) !important;
+            box-sizing: border-box !important;
+        }
+        .ask-modal-header {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            width: 100% !important;
+            padding-bottom: 14px !important;
+            border-bottom: 1px solid var(--panel-border) !important;
+            flex-shrink: 0 !important;
+            gap: 16px !important;
+            box-sizing: border-box !important;
+        }
+        .ask-modal-title-group {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 14px !important;
+            flex: 1 !important;
+            min-width: 0 !important;
+        }
+        .ask-modal-icon {
+            font-size: 22px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 40px !important;
+            height: 40px !important;
+            border-radius: 10px !important;
+            background: rgba(6, 182, 212, 0.12) !important;
+            border: 1px solid rgba(6, 182, 212, 0.25) !important;
+            flex-shrink: 0 !important;
+        }
+        .ask-modal-text {
+            flex: 1 !important;
+            min-width: 0 !important;
+        }
+        .ask-modal-title {
+            font-family: var(--font-display) !important;
+            font-size: 17px !important;
+            font-weight: 700 !important;
+            color: var(--text) !important;
+            letter-spacing: 0.02em !important;
+            line-height: 1.2 !important;
+            white-space: nowrap !important;
+        }
+        .ask-modal-subtitle {
+            font-size: 11.5px !important;
+            color: var(--text-muted) !important;
+            font-family: var(--font-mono) !important;
+            margin-top: 3px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+        .ask-close-btn {
+            padding: 6px 12px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            flex-shrink: 0 !important;
+            cursor: pointer !important;
+            color: var(--text) !important;
+            background: var(--panel) !important;
+            border: 1px solid var(--panel-border) !important;
+            transition: all 0.15s ease !important;
+        }
+        .ask-close-btn:hover {
+            border-color: var(--cyan) !important;
+            color: var(--cyan) !important;
+        }
+        .ask-question-section {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+            width: 100% !important;
+            flex-shrink: 0 !important;
+            box-sizing: border-box !important;
+        }
+        .ask-helper-text {
+            font-size: 12.5px !important;
+            color: var(--text-muted) !important;
+            line-height: 1.4 !important;
+        }
+        .ask-textarea {
+            width: 100% !important;
+            box-sizing: border-box !important;
+            background: var(--bg) !important;
+            border: 1px solid var(--panel-border) !important;
+            color: var(--text) !important;
+            padding: 14px 16px !important;
+            border-radius: 10px !important;
+            font-family: var(--font-body) !important;
+            font-size: 14px !important;
+            line-height: 1.55 !important;
+            resize: vertical !important;
+            min-height: 110px !important;
+            max-height: 160px !important;
+            height: 120px !important;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+        }
+        .ask-textarea:focus {
+            outline: none !important;
+            border-color: var(--cyan) !important;
+            box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+        }
+        .ask-action-row {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            width: 100% !important;
+            gap: 16px !important;
+            box-sizing: border-box !important;
+        }
+        .ask-grounding-pill {
+            font-size: 11.5px !important;
+            color: var(--text-muted) !important;
+            font-family: var(--font-mono) !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+        #askSubmitBtn {
+            min-width: 130px !important;
+            padding: 9px 22px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.02em !important;
+            flex-shrink: 0 !important;
+        }
+        .ask-response-workspace {
+            flex: 1 !important;
+            min-height: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+            margin-top: 4px !important;
+        }
+        .ask-response-container {
+            flex: 1 !important;
+            min-height: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            background: rgba(4, 9, 24, 0.8) !important;
+            border: 1px solid var(--panel-border) !important;
+            border-left: 4px solid var(--cyan) !important;
+            border-radius: 12px !important;
+            padding: 22px 28px !important;
+            font-size: 14px !important;
+            line-height: 1.75 !important;
+            color: var(--text) !important;
+            max-height: none !important;
+        }
+        .ask-response-container * {
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        .ask-placeholder-state {
+            height: 100% !important;
+            min-height: 180px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            color: var(--text-muted) !important;
+            padding: 30px !important;
+            gap: 10px !important;
+            font-size: 13.5px !important;
+            box-sizing: border-box !important;
+        }
+        @media (max-width: 1024px) {
+            .ask-modal-card {
+                width: 90vw !important;
+                height: 84vh !important;
+                max-width: 1000px !important;
+                padding: 20px 22px !important;
+            }
+        }
+        @media (max-width: 640px) {
+            .ask-modal-card {
+                width: 96vw !important;
+                height: 94vh !important;
+                max-width: none !important;
+                max-height: none !important;
+                min-width: 0 !important;
+                padding: 16px !important;
+                gap: 10px !important;
+            }
+            .ask-modal-title { font-size: 15px !important; }
+            .ask-modal-subtitle { font-size: 10.5px !important; }
+            .ask-textarea { min-height: 90px !important; height: 95px !important; padding: 10px 12px !important; }
+            .ask-action-row { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+            #askSubmitBtn { width: 100% !important; }
+        }
+    </style>
+
+
+    <script>
+        // Runtime protocol hygiene check
+        if (typeof window !== "undefined" && window.location && window.location.protocol === "file:") {
+            window.addEventListener("DOMContentLoaded", function() {
+                var banner = document.getElementById("errorNotificationBanner");
+                var msg = document.getElementById("errorBannerMessage");
+                if (banner && msg) {
+                    msg.innerHTML = "<strong>Protocol Notice:</strong> Browser security blocks ES module imports on <code>file://</code> URLs. Please open via the FastAPI application gateway at <a href='http://127.0.0.1:8000/' style='color: var(--cyan); text-decoration: underline; font-weight: bold;'>http://127.0.0.1:8000/</a> (or run <code>uvicorn backend.api.main:app</code>).";
+                    banner.style.display = "flex";
+                }
+            });
+        }
+    </script>
 </head>
+
 <body>
 
 <!-- BACKGROUND PARTICLE CANVAS (DECORATIVE QUANTUM CLOUD) -->
@@ -41,19 +278,38 @@
         </div>
     </div>
 
-    <!-- TOPBAR MASTERY BADGE -->
-    <div style="display: flex; align-items: center; gap: 8px;" id="topbarBadges">
-        <div class="chip" id="chipMastery" title="Concepts mastered">
+    <!-- TOPBAR ACHIEVEMENT CHIPS (RESTORED - PHASE 2) -->
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="topbarBadges">
+        <div class="chip" id="chipStreak" title="Current session streak (presentation metric)">
+            <span class="chip-icon">🔥</span>
+            <span class="chip-label">Streak</span>
+            <span class="chip-val flame" id="badgeStreak">0</span>
+        </div>
+        <div class="chip" id="chipMastery" title="Curriculum activities completed">
             <span class="chip-icon">🏆</span>
             <span class="chip-label">Mastery</span>
-            <span class="chip-val green" id="badgeMastery">1/4</span>
+            <span class="chip-val green" id="badgeMastery">0/4</span>
+        </div>
+        <div class="chip" id="chipPoints" title="Session progress points (presentation metric)">
+            <span class="chip-icon">⭐</span>
+            <span class="chip-label">Points</span>
+            <span class="chip-val gold" id="badgePoints">0</span>
+        </div>
+        <div class="chip" id="chipAccuracy" title="Overall prediction and diagnostic accuracy (presentation metric)">
+            <span class="chip-icon">🎯</span>
+            <span class="chip-label">Accuracy</span>
+            <span class="chip-val" id="badgeAccuracy">—</span>
         </div>
     </div>
 
     <div class="header-right">
-        <input type="hidden" id="learnerIdInput" value="">
-        <button class="btn secondary" style="padding: 6px 12px; font-size: 11px;" onclick="handleResetSession()">🔄 Reset Session</button>
-        <button class="btn secondary" style="padding: 6px 12px; font-size: 11px;" onclick="openAskModal()">🤖 Ask AI</button>
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">Learner ID:</span>
+            <input type="text" id="learnerIdInput" value="" placeholder="demo_learner" title="Active session learner ID" onchange="handleLearnerIdChange(this.value)" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 4px 8px; border-radius: 6px; font-family: var(--font-mono); font-size: 11px; width: 110px;">
+        </div>
+        <button class="btn secondary" style="padding: 5px 10px; font-size: 11px;" id="demoModeToggleBtn" onclick="toggleDemoMode()">⚡ Demo Mode: OFF</button>
+        <button class="btn secondary" style="padding: 5px 10px; font-size: 11px;" onclick="handleResetSession()">🔄 Reset Session</button>
+        <button class="btn secondary" style="padding: 5px 10px; font-size: 11px;" onclick="openAskModal()">🤖 Ask AI</button>
         <button class="profile-btn" id="profileOpenBtn" onclick="openProfileModal()" title="Learner Profile & Settings">QE</button>
     </div>
 </header>
@@ -64,8 +320,83 @@
     <button style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 14px;" onclick="closeErrorBanner()">✕</button>
 </div>
 
+<!-- APP NAVIGATION TABS (PHASE 9: LAB vs LEARN) -->
+<div class="app-nav-bar">
+    <div class="nav-tabs-group">
+        <button class="nav-tab-btn active" id="tabBtnLab" onclick="switchMainTab('lab')">
+            <span>⚡</span> Interactive Lab & Simulation
+        </button>
+        <button class="nav-tab-btn" id="tabBtnLearn" onclick="switchMainTab('learn')">
+            <span>📚</span> Learn & Readiness Curriculum
+        </button>
+    </div>
+    <div style="font-size: 11px; font-family: var(--font-mono); display: flex; align-items: center; gap: 6px;">
+        <span style="color: var(--cyan); font-weight: 600;">Learning Engine • Quantum Execution</span>
+        <span style="color: var(--text-muted); font-size: 10px; opacity: 0.7;">(M2 Authority • M3 Simulator)</span>
+    </div>
+</div>
+
+<!-- DEMO MODE TRANSPARENCY & GUIDANCE BAR (PHASE 10 & 11) -->
+<div class="demo-mode-bar" id="demoModeNoticeBar" style="display: none;">
+    <div class="demo-badge-title">
+        <span>⚡</span> DEMO MODE — GUIDED EVALUATION
+    </div>
+    <div class="demo-transparency-note" id="demoTransparencyText">
+        <strong>Runtime Transparency:</strong> Demo Mode does not preload learner outcomes. Predictions, quantum results, evidence, and adaptive decisions are generated through the exact same runtime pipeline used by a normal learner session.
+    </div>
+    <button class="btn secondary" style="padding: 3px 8px; font-size: 10px;" onclick="toggleDemoMode()">Exit Demo</button>
+</div>
+
+<!-- LIVE EVIDENCE TRACE (DEMO MODE & EVIDENCE AUDIT - PHASE 10) -->
+<div class="live-trace-card" id="liveTraceCard" style="display: none; margin: 8px 28px 0 28px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span style="font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text);">
+            LIVE EVIDENCE TRACE (Causal Runtime Pipeline)
+        </span>
+        <span style="font-family: var(--font-mono); font-size: 11px; color: var(--cyan);" id="traceStatusMessage">
+            Awaiting learner submission...
+        </span>
+    </div>
+    <div class="trace-steps-row" id="traceStepsRow">
+        <div class="trace-node" id="traceNode-input" title="Stage 1: Learner Input / Predicted State">
+            <span class="trace-node-title">1. Your Prediction</span>
+            <span class="trace-node-detail" id="traceDetail-input">—</span>
+        </div>
+        <span class="trace-arrow">→</span>
+        <div class="trace-node" id="traceNode-m3" title="Stage 2: M3 Qiskit Aer Quantum Circuit Execution">
+            <span class="trace-node-title">2. Quantum Experiment</span>
+            <span class="trace-node-detail" id="traceDetail-m3">—</span>
+        </div>
+        <span class="trace-arrow">→</span>
+        <div class="trace-node" id="traceNode-verified" title="Stage 3: Verified Simulation Result from Simulator">
+            <span class="trace-node-title">3. What Happened</span>
+            <span class="trace-node-detail" id="traceDetail-verified">—</span>
+        </div>
+        <span class="trace-arrow">→</span>
+        <div class="trace-node" id="traceNode-evidence" title="Stage 4: Structured Learner Evidence Logging">
+            <span class="trace-node-title">4. What We Learned</span>
+            <span class="trace-node-detail" id="traceDetail-evidence">—</span>
+        </div>
+        <span class="trace-arrow">→</span>
+        <div class="trace-node" id="traceNode-m2" title="Stage 5: M2 Deterministic Cognitive Model Inference">
+            <span class="trace-node-title">5. Learning Decision</span>
+            <span class="trace-node-detail" id="traceDetail-m2">—</span>
+        </div>
+        <span class="trace-arrow">→</span>
+        <div class="trace-node" id="traceNode-decision" title="Stage 6: Adaptive Pedagogical Route">
+            <span class="trace-node-title">6. Your Next Step</span>
+            <span class="trace-node-detail" id="traceDetail-decision">—</span>
+        </div>
+        <span class="trace-arrow">→</span>
+        <div class="trace-node" id="traceNode-m5" title="Stage 7: M5 Grounded AI Pedagogical Explanation">
+            <span class="trace-node-title">7. AI Explanation</span>
+            <span class="trace-node-detail" id="traceDetail-m5">—</span>
+        </div>
+    </div>
+</div>
+
 <!-- ADAPTIVE JOURNEY TRACK -->
-<div class="journey-bar">
+<div class="journey-bar" id="journeyBar">
     <div class="journey-left">
         <span class="journey-title">Adaptive Path:</span>
         <div class="journey-steps" id="journeySteps">
@@ -75,6 +406,7 @@
     <div class="journey-progress-badge" id="journeyProgressBadge">Route: Challenge</div>
 </div>
 
+
 <!-- WORKSPACE LAYOUT -->
 <div class="workspace-layout">
     <!-- LEFT PANE: Circuit Studio & M3 Simulation (M6) -->
@@ -82,7 +414,7 @@
         <!-- Circuit Studio -->
         <div class="circuit-studio">
             <div class="card-header">
-                <span class="card-title">Interactive Quantum Circuit Studio (Visual Exploration)</span>
+                <span class="card-title">Interactive Quantum Circuit Studio (Visual Exploration & Sandbox)</span>
                 <span style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">
                     Tool: <strong id="activeToolDisplay" style="color: var(--cyan);">None</strong>
                 </span>
@@ -106,7 +438,7 @@
             <div class="wire-grid" id="circuitWireGrid"></div>
 
             <div class="gate-info-callout" id="gateInfoDisplay">
-                <span>💡 Visual Circuit Explorer: Place gates on the grid to inspect quantum operations. Submissions execute the active activity circuit on Qiskit Aer (1024 shots).</span>
+                <span>💡 Visual Circuit Explorer: Drag from palette or click gates onto the grid to inspect quantum operations. Submissions execute the active activity circuit on Qiskit Aer (1024 shots).</span>
             </div>
         </div>
 
@@ -124,18 +456,18 @@
             <div class="state-triad-grid" id="stateTriadContainer">
                 <div class="triad-box prediction" id="triadPredictionBox" onclick="inspectStateFromTriad('prediction')">
                     <div class="triad-label">Learner Prediction</div>
-                    <div class="triad-val pred" id="resPredictedState">|01⟩</div>
-                    <div class="triad-sub" id="resPredictionStatus">Prediction Mismatch</div>
+                    <div class="triad-val pred" id="resPredictedState">—</div>
+                    <div class="triad-sub" id="resPredictionStatus">Awaiting submission</div>
                 </div>
                 <div class="triad-box target" id="triadTargetBox" onclick="inspectStateFromTriad('target')">
                     <div class="triad-label">Theoretical Target</div>
-                    <div class="triad-val targ" id="resTargetState">|10⟩</div>
-                    <div class="triad-sub">Marked Target State</div>
+                    <div class="triad-val targ" id="resTargetState">—</div>
+                    <div class="triad-sub" id="resTargetSub">Target state</div>
                 </div>
                 <div class="triad-box measured" id="triadMeasuredBox" onclick="inspectStateFromTriad('measured')">
                     <div class="triad-label">Empirical Measured</div>
-                    <div class="triad-val meas" id="resMostLikely">|10⟩</div>
-                    <div class="triad-sub" id="resTargetProb">93.8% (1024 shots)</div>
+                    <div class="triad-val meas" id="resMostLikely">—</div>
+                    <div class="triad-sub" id="resTargetProb">Awaiting execution</div>
                 </div>
             </div>
 
@@ -147,45 +479,45 @@
                 <div class="compare-flow">
                     <div class="compare-node">
                         <span class="lbl">Prediction</span>
-                        <span class="val" style="color: var(--yellow);" id="compPredVal">|01⟩</span>
+                        <span class="val" style="color: var(--yellow);" id="compPredVal">—</span>
                     </div>
                     <span class="compare-rel mismatch" id="compRel1">≠</span>
                     <div class="compare-node">
                         <span class="lbl">Theoretical Target</span>
-                        <span class="val" style="color: var(--green);" id="compTargVal">|10⟩</span>
+                        <span class="val" style="color: var(--green);" id="compTargVal">—</span>
                     </div>
                     <span class="compare-rel match" id="compRel2">=</span>
                     <div class="compare-node">
                         <span class="lbl">Measured Empirical</span>
-                        <span class="val" style="color: var(--cyan);" id="compMeasVal">|10⟩</span>
+                        <span class="val" style="color: var(--cyan);" id="compMeasVal">—</span>
                     </div>
                 </div>
                 <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); text-align: center;" id="compSummaryText">
-                    Learner prediction deviated from theoretical target, while Qiskit Aer empirical execution confirmed the target state.
+                    Awaiting execution...
                 </div>
             </div>
 
             <!-- STATE INSPECTOR DRAWER (REQUIREMENT 3C) -->
             <div class="state-inspector-box" id="stateInspectorDrawer" style="display: none;">
                 <div class="inspector-row">
-                    <strong style="color: var(--cyan);">State Inspection: <span id="inspStateName">|10⟩</span></strong>
+                    <strong style="color: var(--cyan);">State Inspection: <span id="inspStateName">—</span></strong>
                     <button style="background: none; border: none; color: var(--text-muted); cursor: pointer;" onclick="closeStateInspector()">✕</button>
                 </div>
                 <div class="inspector-row">
                     <span>Measurement Count:</span>
-                    <span id="inspCountVal">961 / 1024 shots</span>
+                    <span id="inspCountVal">—</span>
                 </div>
                 <div class="inspector-row">
                     <span>Empirical Probability:</span>
-                    <span id="inspProbVal" style="color: var(--cyan);">93.8%</span>
+                    <span id="inspProbVal" style="color: var(--cyan);">—</span>
                 </div>
                 <div class="inspector-row">
                     <span>Theoretical Target Match:</span>
-                    <span id="inspTargetMatch" style="color: var(--green);">Yes (Marked State)</span>
+                    <span id="inspTargetMatch" style="color: var(--green);">—</span>
                 </div>
                 <div class="inspector-row">
                     <span>Learner Prediction Match:</span>
-                    <span id="inspPredMatch" style="color: var(--red);">No (Predicted |01⟩)</span>
+                    <span id="inspPredMatch" style="color: var(--red);">—</span>
                 </div>
             </div>
 
@@ -225,7 +557,7 @@
                     <button class="basis-pill" onclick="selectBasisPill('11')">|11⟩</button>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <input type="text" class="text-input" id="predictionField" value="01" placeholder="e.g. 01, 10" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-family: var(--font-mono); font-size: 13px; flex: 1;">
+                    <input type="text" class="text-input" id="predictionField" value="" placeholder="e.g. 01, 10" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-family: var(--font-mono); font-size: 13px; flex: 1;">
                     <button class="btn" id="submitPredictionBtn" onclick="handleSubmitPrediction()">Run & Evaluate</button>
                 </div>
             </div>
@@ -246,88 +578,88 @@
         <!-- 2. Empirical Evidence & Learner Cognition Card -->
         <div class="card" id="evidenceOutcomeCard" style="display: none;">
             <div class="card-header">
-                <span class="card-title">Learner Evidence & Cognitive State</span>
+                <span class="card-title">What We Learned</span>
                 <span class="badge" id="outcomeBadge">Prediction Outcome</span>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
                 <div class="stat-box" style="text-align: left; padding: 10px; background: var(--bg); border: 1px solid var(--panel-border); border-radius: 8px;">
-                    <div class="stat-label">Cognitive Trajectory Trend</div>
-                    <div class="stat-val" style="font-size: 13px; color: var(--purple);" id="trajectoryTrendDisplay">observing</div>
+                    <div class="stat-label">Learning Progress</div>
+                    <div class="stat-val" style="font-size: 13px; color: var(--purple);" id="trajectoryTrendDisplay">—</div>
                 </div>
                 <div class="stat-box" style="text-align: left; padding: 10px; background: var(--bg); border: 1px solid var(--panel-border); border-radius: 8px;">
-                    <div class="stat-label">Inference Confidence</div>
-                    <div class="stat-val" style="font-size: 13px; color: var(--cyan);" id="confidenceBadgeDisplay">35%</div>
+                    <div class="stat-label">Confidence</div>
+                    <div class="stat-val" style="font-size: 13px; color: var(--cyan);" id="confidenceBadgeDisplay">—</div>
                 </div>
             </div>
 
             <div style="font-size: 12px; font-family: var(--font-mono); color: var(--text); background: var(--bg); padding: 10px; border-radius: 8px; border: 1px solid var(--panel-border); display: flex; flex-direction: column; gap: 6px;">
-                <div><strong style="color: var(--text-muted);">Evidence Sufficiency:</strong> <span style="color: var(--yellow);" id="evidenceSufficiencyDisplay">Insufficient (Gathering Observations)</span></div>
-                <div><strong style="color: var(--text-muted);">Learner-State Hypothesis:</strong> <span style="color: var(--cyan);" id="inferredHypothesisDisplay">Preliminary difficulty observation</span></div>
-                <div><strong style="color: var(--text-muted);">Latest Evidence Record:</strong> <span style="color: var(--text-muted);" id="evidenceIdDisplay">ev_001</span></div>
+                <div><strong style="color: var(--text-muted);">Evidence Strength:</strong> <span style="color: var(--yellow);" id="evidenceSufficiencyDisplay">Awaiting evidence</span></div>
+                <div><strong style="color: var(--text-muted);">What We Think You Understand:</strong> <span style="color: var(--cyan);" id="inferredHypothesisDisplay">No hypothesis yet</span></div>
+                <div><strong style="color: var(--text-muted);">Evidence Record ID:</strong> <span style="color: var(--text-muted);" id="evidenceIdDisplay">—</span></div>
             </div>
         </div>
 
-        <!-- 3. "WHY THIS NEXT?" ADAPTIVE DECISION TIMELINE (REQUIREMENT 4) -->
+        <!-- 3. DECISION EVIDENCE INSPECTOR / "WHY THIS NEXT?" (PHASE 5) -->
         <div class="card" id="adaptiveDecisionCard" style="display: none;">
             <div class="card-header">
-                <span class="card-title">Why This Next? (Adaptive Recommendation)</span>
-                <span class="badge action" id="adaptiveActionBadge">gather_evidence</span>
+                <span class="card-title">Why This Next?</span>
+                <span class="badge action" id="adaptiveActionBadge">—</span>
             </div>
 
             <div class="causal-chain">
                 <!-- 1. Trigger -->
                 <div class="chain-step" onclick="toggleChainStep(this)">
                     <div class="chain-node-header">
-                        <div class="chain-node-title"><span>1. Decision Trigger</span></div>
+                        <div class="chain-node-title"><span>1. Why We Made This Choice</span></div>
                         <span class="chain-toggle-icon">▶</span>
                     </div>
-                    <div class="chain-node-val" id="decisionTriggerDisplay">Single Prediction Mismatch</div>
-                    <div class="chain-node-desc" id="triggerDesc">Triggered because the learner's initial prediction mismatched the target outcome.</div>
+                    <div class="chain-node-val" id="decisionTriggerDisplay">—</div>
+                    <div class="chain-node-desc" id="triggerDesc">Trigger condition evaluated deterministically by the learning engine.</div>
                 </div>
                 <div class="chain-arrow">↓</div>
 
                 <!-- 2. Evidence Sufficiency -->
                 <div class="chain-step" onclick="toggleChainStep(this)">
                     <div class="chain-node-header">
-                        <div class="chain-node-title"><span>2. Evidence Sufficiency</span></div>
+                        <div class="chain-node-title"><span>2. Evidence Strength</span></div>
                         <span class="chain-toggle-icon">▶</span>
                     </div>
-                    <div class="chain-node-val highlight-yellow" id="chainSufficiencyDisplay">Insufficient (Gathering Observations)</div>
-                    <div class="chain-node-desc" id="sufficiencyDesc">Single observations do not establish cognitive certainty; more evidence is required.</div>
+                    <div class="chain-node-val highlight-yellow" id="chainSufficiencyDisplay">—</div>
+                    <div class="chain-node-desc" id="sufficiencyDesc">Evaluation of whether empirical evidence is sufficient for targeted instruction.</div>
                 </div>
                 <div class="chain-arrow">↓</div>
 
                 <!-- 3. Inferred Hypothesis -->
                 <div class="chain-step" onclick="toggleChainStep(this)">
                     <div class="chain-node-header">
-                        <div class="chain-node-title"><span>3. Inferred Learner-State Hypothesis</span></div>
+                        <div class="chain-node-title"><span>3. What We Think You Understand</span></div>
                         <span class="chain-toggle-icon">▶</span>
                     </div>
-                    <div class="chain-node-val highlight-cyan" id="chainHypothesisDisplay">Preliminary difficulty observation</div>
-                    <div class="chain-node-desc" id="hypothesisDesc">M2 cognitive model hypothesis representing estimated understanding.</div>
+                    <div class="chain-node-val highlight-cyan" id="chainHypothesisDisplay">—</div>
+                    <div class="chain-node-desc" id="hypothesisDesc">Learner understanding estimate derived from attempt evidence.</div>
                 </div>
                 <div class="chain-arrow">↓</div>
 
                 <!-- 4. Supporting Evidence IDs -->
                 <div class="chain-step" id="supportingEvidenceSection" onclick="toggleChainStep(this)">
                     <div class="chain-node-header">
-                        <div class="chain-node-title"><span>4. Supporting Evidence Used</span></div>
+                        <div class="chain-node-title"><span>4. Supporting Evidence</span></div>
                         <span class="chain-toggle-icon">▶</span>
                     </div>
                     <div id="supportingEvidenceList" class="supporting-chips"></div>
-                    <div class="chain-node-desc">Direct audit trail of historical attempt evidence cited by M2.</div>
+                    <div class="chain-node-desc">Direct audit trail of historical attempt evidence cited by the learning engine.</div>
                 </div>
                 <div class="chain-arrow">↓</div>
 
                 <!-- 5. Decision & Pedagogical Rationale -->
                 <div class="chain-step expanded" onclick="toggleChainStep(this)">
                     <div class="chain-node-header">
-                        <div class="chain-node-title"><span>5. Pedagogical Action & Rationale</span></div>
+                        <div class="chain-node-title"><span>5. Why We Chose This Next</span></div>
                         <span class="chain-toggle-icon">▶</span>
                     </div>
                     <p class="chain-reason" id="adaptiveReasonText">
-                        Adaptive pedagogical rationale explaining why this action was selected.
+                        Awaiting activity submission...
                     </p>
                 </div>
                 <div class="chain-arrow">↓</div>
@@ -335,10 +667,10 @@
                 <!-- 6. Next Activity & Navigation -->
                 <div class="chain-step next-step">
                     <div>
-                        <div class="chain-node-title">6. Next Recommended Activity</div>
-                        <div class="next-activity-title" id="nextTargetActivityId">Grover 2-Qubit Target State Prediction</div>
+                        <div class="chain-node-title">6. Your Next Step</div>
+                        <div class="next-activity-title" id="nextTargetActivityId">—</div>
                     </div>
-                    <button class="btn success" id="continueNextBtn" onclick="handleContinueToTarget()">Continue →</button>
+                    <button class="btn success" id="continueNextBtn" style="display: none;" onclick="handleContinueToTarget()">Continue →</button>
                 </div>
             </div>
 
@@ -350,30 +682,178 @@
         <!-- 4. Grounded AI Guidance Card (M5 - Requirement 8) -->
         <div class="card" id="aiGuidanceCard" style="display: none;">
             <div class="card-header">
-                <span class="card-title">M5 Grounded AI Guidance</span>
+                <span class="card-title">AI Learning Guide</span>
                 <button class="btn secondary" style="padding: 4px 10px; font-size: 11px;" id="explainBtn" onclick="handleExplain()">Explain My Result</button>
             </div>
             <div style="font-size: 11px; font-family: var(--font-mono); color: var(--cyan); margin-bottom: 2px;">
-                💡 Grounded Guidance: M2 determined the adaptive learning path. M5 explains the underlying concept and verified evidence.
+                💡 Grounded Guidance: The learning engine determines the adaptive path; AI explains the underlying concept and verified evidence.
             </div>
             <div class="explanation-box" id="aiExplanationText">Click "Explain My Result" to generate an authoritative explanation grounded in the quantum curriculum.</div>
+        </div>
+
+        <!-- 5. CHRONOLOGICAL EVIDENCE HISTORY (AUDIT TRAIL - PHASE 4) -->
+        <div class="card" id="evidenceHistoryCard">
+            <div class="card-header">
+                <span class="card-title">Learning History</span>
+                <span class="badge" id="evidenceCountBadge">0 Records</span>
+            </div>
+            <div id="evidenceHistoryEmptyMsg" style="font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); padding: 10px 0;">
+                No learning events recorded yet. Submit a prediction or complete a readiness check to generate verifiable learner evidence.
+            </div>
+            <div class="evidence-history-box" id="evidenceHistoryContainer" style="display: none;"></div>
         </div>
     </div>
 </div>
 
-<!-- AI CONCEPTUAL ASK MODAL -->
-<div class="modal-overlay" id="askModal" style="display: none;">
-    <div class="modal-card">
-        <div class="card-header">
-            <span class="card-title">🤖 Ask Quantum AI Assistant</span>
-            <button class="btn secondary" style="padding: 2px 8px; font-size: 11px;" onclick="closeAskModal()">✕</button>
+<!-- LEARN VIEW CONTAINER (PHASE 9) -->
+<div class="learn-pane-view" id="learnPaneView">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--panel-border); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+        <div>
+            <h2 style="font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px;">
+                📚 Quantum Curriculum & Diagnostic Readiness
+            </h2>
+            <div style="font-size: 12px; color: var(--text-muted);">
+                Lightweight vertical slice connecting diagnostic evidence directly into the M2 cognitive model.
+            </div>
         </div>
-        <p style="font-size: 12px; color: var(--text-muted);">Ask any conceptual question about qubits, states, superposition, quantum gates, or Grover's algorithm:</p>
-        <textarea id="askQuestionInput" rows="3" style="background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 10px; border-radius: 8px; font-family: var(--font-body); font-size: 13px; resize: vertical;" placeholder="e.g. Why does Grover amplitude amplification over-rotate?"></textarea>
-        <button class="btn" id="askSubmitBtn" onclick="handleAskQuestion()">Inquire</button>
-        <div class="explanation-box" id="askAnswerBox" style="display: none; max-height: 180px;"></div>
+        <button class="btn" onclick="openReadinessModal()">⚡ Take Quick Quantum Readiness Check</button>
+    </div>
+
+    <!-- READINESS RESULT CALLOUT (IF COMPLETED) -->
+    <div id="readinessResultBanner" style="display: none; background: rgba(34, 211, 238, 0.1); border: 1px solid var(--cyan); border-radius: 8px; padding: 14px 18px; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+            <div style="font-size: 13px; font-weight: 700; color: var(--cyan); margin-bottom: 2px;">
+                Readiness Evaluation: <span id="readinessScoreVal">0/4</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted);" id="readinessM2Recommendation">
+                M2 Recommendation: Ingested evidence into learner state.
+            </div>
+        </div>
+        <button class="btn success" id="readinessProceedBtn" onclick="handleReadinessProceed()">Go to Recommended Activity →</button>
+    </div>
+
+    <div class="curriculum-grid">
+        <!-- 1. Quantum Foundations -->
+        <div class="curriculum-card">
+            <div class="curriculum-card-header">
+                <span class="curriculum-card-title">1. Quantum Foundations</span>
+                <span class="curriculum-status-tag active">Core Prereqs</span>
+            </div>
+            <p class="curriculum-card-desc">
+                Foundational building blocks of quantum computing: qubits, Dirac ket notation, superposition, and measurement probabilities.
+            </p>
+            <div class="curriculum-item-list">
+                <div class="curriculum-subitem">
+                    <span>Qubits & Bloch Sphere (<code>quantum.qubit</code>)</span>
+                    <span class="curriculum-status-tag preview">Preview Card</span>
+                </div>
+                <div class="curriculum-subitem">
+                    <span>Quantum States & Dirac Notation (<code>quantum.state</code>)</span>
+                    <span class="curriculum-status-tag preview">Preview Card</span>
+                </div>
+                <div class="curriculum-subitem" style="cursor: pointer;" onclick="switchToActivityFromLearn('act_superposition_remediation')">
+                    <span><strong>Equal Superposition Foundation</strong> (<code>quantum.superposition</code>)</span>
+                    <span class="curriculum-status-tag active">Active Activity →</span>
+                </div>
+                <div class="curriculum-subitem" style="cursor: pointer;" onclick="switchToActivityFromLearn('act_measurement_prob_diagnostic')">
+                    <span><strong>Measurement & Born's Rule</strong> (<code>quantum.measurement</code>)</span>
+                    <span class="curriculum-status-tag active">Active Activity →</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Quantum Algorithms -->
+        <div class="curriculum-card">
+            <div class="curriculum-card-header">
+                <span class="curriculum-card-title">2. Quantum Algorithms</span>
+                <span class="curriculum-status-tag active">Active MVP</span>
+            </div>
+            <p class="curriculum-card-desc">
+                Amplitude amplification and unstructured database search demonstrating quantum speedup via Grover's algorithm.
+            </p>
+            <div class="curriculum-item-list">
+                <div class="curriculum-subitem" style="cursor: pointer;" onclick="switchToActivityFromLearn('act_grover_2q_predict')">
+                    <span><strong>Grover 2-Qubit Search</strong> (<code>grover.search_problem</code>)</span>
+                    <span class="curriculum-status-tag active">Active Challenge →</span>
+                </div>
+                <div class="curriculum-subitem" style="cursor: pointer;" onclick="switchToActivityFromLearn('act_grover_iteration_reasoning')">
+                    <span><strong>Grover Iteration & Rotation</strong> (<code>grover.amplitude_amplification</code>)</span>
+                    <span class="curriculum-status-tag active">Active Advancement →</span>
+                </div>
+                <div class="curriculum-subitem">
+                    <span>Quantum Phase Estimation & Shor's (<code>quantum.algorithms</code>)</span>
+                    <span class="curriculum-status-tag preview">Planned Slice</span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- QUICK QUANTUM READINESS CHECK MODAL (PHASE 8) -->
+<div class="modal-overlay" id="readinessModal" style="display: none;">
+    <div class="modal-card" style="max-width: 600px;">
+        <div class="card-header">
+            <span class="card-title">⚡ Quick Quantum Readiness Check</span>
+            <button class="btn secondary" style="padding: 2px 8px; font-size: 11px;" onclick="closeReadinessModal()">✕</button>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
+            4 concise questions from the diagnostic question bank assessing foundational knowledge. Real evaluation generates structured <code>LearnerEvidence</code> ingested by M2.
+        </p>
+
+        <div class="readiness-quiz-container" id="readinessQuizContainer">
+            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">Loading diagnostic questions...</div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
+            <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);" id="readinessProgressText">0 of 4 answered</span>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn secondary" onclick="closeReadinessModal()">Cancel</button>
+                <button class="btn" id="submitReadinessBtn" onclick="handleSubmitReadinessCheck()">Evaluate Readiness</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- AI CONCEPTUAL ASK MODAL -->
+<div class="modal-overlay" id="askModal" style="display: none;">
+    <div class="modal-card ask-modal-card">
+        <div class="ask-modal-header">
+            <div class="ask-modal-title-group">
+                <div class="ask-modal-icon">🤖</div>
+                <div class="ask-modal-text">
+                    <div class="ask-modal-title">Ask Quantum AI Assistant</div>
+                    <div class="ask-modal-subtitle">Grounded conceptual guidance powered by curriculum context</div>
+                </div>
+            </div>
+            <button class="btn secondary ask-close-btn" onclick="closeAskModal()" title="Close Assistant" aria-label="Close Assistant">✕</button>
+        </div>
+
+        <div class="ask-question-section">
+            <div class="ask-helper-text">Ask any conceptual question about qubits, basis states, superposition, quantum logic gates, or Grover's search algorithm:</div>
+            <textarea id="askQuestionInput" class="ask-textarea" placeholder="e.g. Why does Grover amplitude amplification over-rotate when too many iterations are applied?"></textarea>
+            <div class="ask-action-row">
+                <div class="ask-grounding-pill">
+                    <span style="color: var(--cyan);">💡</span>
+                    <span>Grounded in verified curriculum principles &amp; Born's rule</span>
+                </div>
+                <button class="btn" id="askSubmitBtn" onclick="handleAskQuestion()">Inquire</button>
+            </div>
+        </div>
+
+        <div class="ask-response-workspace">
+            <div class="explanation-box ask-response-container" id="askAnswerBox">
+                <div class="ask-placeholder-state" id="askPlaceholder">
+                    <span style="font-size: 28px; opacity: 0.7;">✨</span>
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text);">AI Conceptual Learning Workspace</div>
+                    <div style="max-width: 540px; line-height: 1.5;">Enter any question above and click <strong>Inquire</strong>. The AI assistant will explain quantum concepts, mathematical formalism, and algorithm mechanics with curriculum grounding.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
 <!-- LEARNER PROFILE & SETTINGS MODAL -->
 <div class="modal-overlay" id="profileModal" style="display: none;">
@@ -447,7 +927,7 @@
 </div>
 
 <script type="module">
-    import { fetchActivities, fetchActivity, submitPrediction, explainExperiment, askConceptualQuestion } from './js/api_client.js';
+    import { fetchActivities, fetchActivity, submitPrediction, explainExperiment, askConceptualQuestion, fetchDiagnosticReadiness, submitDiagnosticAnswers, fetchLearnerState } from './js/api_client.js';
     import { normalizeSubmissionResponse, formatStateLabel, formatPercentage, computeBadgeMetrics, getLearnerProfile, saveLearnerProfile, getActivityRole, getActivityStatus, formatRoleLabel, formatStatusLabel } from './js/adapter.js';
     import { CircuitStudio, GATE_DEFINITIONS } from './js/circuit_view.js';
 
@@ -460,6 +940,11 @@
     let circuitStudio = null;
     let currentLearnerState = {};
     let lastAdaptiveDecision = null;
+
+    let isDemoMode = false;
+    let currentTab = "lab";
+    let readinessQuestions = [];
+    let readinessAnswers = {};
 
     // -------------------------------------------------------------------
     // 1. Particle Cloud Background Animation (Non-blocking & graceful)
@@ -574,7 +1059,11 @@
 
             if (line.startsWith("### ")) {
                 if (inList) { html += "</ul>"; inList = false; }
-                html += `<h4 class="ai-heading">${line.slice(4)}</h4>`;
+                let heading = line.slice(4);
+                if (heading.includes("Quantum Execution Analysis")) heading = "What Happened in the Experiment";
+                else if (heading.includes("Adaptive Learning Path")) heading = "What We Recommend Next";
+                else if (heading.includes("Evidence & Decision Trace") || heading.includes("Evidence &amp; Decision Trace")) heading = "Why This Choice Was Made";
+                html += `<h4 class="ai-heading">${heading}</h4>`;
             } else if (line.startsWith("## ")) {
                 if (inList) { html += "</ul>"; inList = false; }
                 html += `<h3 class="ai-heading-large">${line.slice(3)}</h3>`;
@@ -609,7 +1098,18 @@
         const metrics = computeBadgeMetrics(learnerState, activitiesList);
         const masteryEl = document.getElementById("badgeMastery");
         if (masteryEl) masteryEl.textContent = `${metrics.completedCount}/${metrics.totalCount}`;
+        const streakEl = document.getElementById("badgeStreak");
+        if (streakEl) streakEl.textContent = metrics.streak;
+        const pointsEl = document.getElementById("badgePoints");
+        if (pointsEl) pointsEl.textContent = metrics.points;
+        const accEl = document.getElementById("badgeAccuracy");
+        if (accEl) {
+            let totalAtt = 0;
+            for (const cnt of Object.values(learnerState.attempts || {})) totalAtt += Number(cnt) || 0;
+            accEl.textContent = totalAtt > 0 ? `${metrics.accuracyPct}%` : "—";
+        }
     }
+
 
     // -------------------------------------------------------------------
     // 5. Learner Profile & Modal Handlers
@@ -710,25 +1210,31 @@
     // -------------------------------------------------------------------
     // 6. Global Functions for Toolbar & Interactions
     // -------------------------------------------------------------------
-    window.selectGate = function(type) {
-        circuitStudio.setTool(type);
-        document.querySelectorAll(".gate-btn").forEach(b => b.classList.remove("active-tool"));
-        event.target.classList.add("active-tool");
-        document.getElementById("activeToolDisplay").textContent = type;
+    window.selectGate = function(type, targetEl) {
+        if (circuitStudio) circuitStudio.setTool(type);
+        document.querySelectorAll(".gate-btn").forEach(b => {
+            b.classList.toggle("active-tool", b.textContent.trim() === type);
+        });
+        const toolDisp = document.getElementById("activeToolDisplay");
+        if (toolDisp) toolDisp.textContent = type;
         if (GATE_DEFINITIONS[type]) {
             const def = GATE_DEFINITIONS[type];
-            document.getElementById("gateInfoDisplay").innerHTML = `<span><strong>${def.name} (${type}):</strong> ${def.desc} • <code>${def.matrix}</code></span>`;
+            const infoEl = document.getElementById("gateInfoDisplay");
+            if (infoEl) infoEl.innerHTML = `<span><strong>${def.name} (${type}):</strong> ${def.desc} • <code>${def.matrix}</code></span>`;
         }
     };
-    window.addStudioQubit = function() { circuitStudio.addQubit(); };
-    window.clearStudioCircuit = function() { circuitStudio.clear(); };
-    window.loadCircuitPreset = function(name) { circuitStudio.loadPreset(name); };
+    window.addStudioQubit = function() { if (circuitStudio) circuitStudio.addQubit(); };
+    window.clearStudioCircuit = function() { if (circuitStudio) circuitStudio.clear(); };
+    window.loadCircuitPreset = function(name) { if (circuitStudio) circuitStudio.loadPreset(name); };
 
     window.selectBasisPill = function(basis) {
-        document.querySelectorAll(".basis-pill").forEach(p => p.classList.remove("selected"));
-        event.target.classList.add("selected");
-        document.getElementById("predictionField").value = basis;
+        document.querySelectorAll(".basis-pill").forEach(p => {
+            p.classList.toggle("selected", p.textContent.trim().includes(basis));
+        });
+        const predField = document.getElementById("predictionField");
+        if (predField) predField.value = basis;
     };
+
 
     window.toggleChainStep = function(stepElement) {
         stepElement.classList.toggle("expanded");
@@ -780,11 +1286,380 @@
         banner.style.display = "flex";
     }
 
+    // -------------------------------------------------------------------
+    // 7. Reset & Transient State Hygiene (Phase 3)
+    // -------------------------------------------------------------------
+    function resetTransientState() {
+        document.getElementById("quantumResultsCard").style.display = "none";
+        document.getElementById("comparePanel").style.display = "none";
+        document.getElementById("stateInspectorDrawer").style.display = "none";
+        document.getElementById("evidenceOutcomeCard").style.display = "none";
+        document.getElementById("adaptiveDecisionCard").style.display = "none";
+        document.getElementById("aiGuidanceCard").style.display = "none";
+
+        // Reset state triad
+        document.getElementById("resPredictedState").textContent = "—";
+        document.getElementById("resPredictionStatus").textContent = "Awaiting submission";
+        const predBox = document.getElementById("triadPredictionBox");
+        if (predBox) predBox.className = "triad-box prediction";
+        document.getElementById("resTargetState").textContent = "—";
+        document.getElementById("resTargetSub").textContent = "Target state";
+        document.getElementById("resMostLikely").textContent = "—";
+        document.getElementById("resTargetProb").textContent = "Awaiting execution";
+
+        // Reset state compare
+        document.getElementById("compPredVal").textContent = "—";
+        document.getElementById("compTargVal").textContent = "—";
+        document.getElementById("compMeasVal").textContent = "—";
+        document.getElementById("compRel1").textContent = "≠";
+        document.getElementById("compRel1").className = "compare-rel mismatch";
+        document.getElementById("compSummaryText").textContent = "Awaiting execution...";
+
+        // Reset state inspector
+        document.getElementById("inspStateName").textContent = "—";
+        document.getElementById("inspCountVal").textContent = "—";
+        document.getElementById("inspProbVal").textContent = "—";
+        document.getElementById("inspTargetMatch").textContent = "—";
+        document.getElementById("inspPredMatch").textContent = "—";
+
+        // Reset histogram and diagram
+        const hist = document.getElementById("histogramContainer");
+        if (hist) hist.innerHTML = "";
+        const asciiCard = document.getElementById("asciiCircuitContainer");
+        if (asciiCard) asciiCard.style.display = "none";
+
+        // Reset input fields
+        const predField = document.getElementById("predictionField");
+        if (predField) predField.value = "";
+        document.querySelectorAll(".basis-pill").forEach(p => p.classList.remove("selected"));
+        document.querySelectorAll(".option-btn").forEach(b => b.classList.remove("selected"));
+
+        // Reset evidence & decision texts
+        document.getElementById("trajectoryTrendDisplay").textContent = "—";
+        document.getElementById("confidenceBadgeDisplay").textContent = "—";
+        document.getElementById("evidenceSufficiencyDisplay").textContent = "Awaiting evidence";
+        document.getElementById("inferredHypothesisDisplay").textContent = "No hypothesis yet";
+        document.getElementById("evidenceIdDisplay").textContent = "—";
+
+        document.getElementById("adaptiveActionBadge").textContent = "—";
+        document.getElementById("decisionTriggerDisplay").textContent = "—";
+        document.getElementById("chainSufficiencyDisplay").textContent = "—";
+        document.getElementById("chainHypothesisDisplay").textContent = "—";
+        document.getElementById("adaptiveReasonText").textContent = "Awaiting activity submission...";
+        document.getElementById("nextTargetActivityId").textContent = "—";
+        const continueBtn = document.getElementById("continueNextBtn");
+        if (continueBtn) continueBtn.style.display = "none";
+        const prereqGap = document.getElementById("prereqGapCallout");
+        if (prereqGap) prereqGap.style.display = "none";
+
+        selectedOptionLetter = null;
+        lastSubmitResult = null;
+        normalizedModel = null;
+    }
+
+    // -------------------------------------------------------------------
+    // 8. Evidence History Rendering (Phase 4: Audit Trail)
+    // -------------------------------------------------------------------
+    function renderEvidenceHistory(history = []) {
+        const badge = document.getElementById("evidenceCountBadge");
+        const emptyMsg = document.getElementById("evidenceHistoryEmptyMsg");
+        const container = document.getElementById("evidenceHistoryContainer");
+        if (!badge || !emptyMsg || !container) return;
+
+        const count = history.length;
+        badge.textContent = `${count} Record${count === 1 ? '' : 's'}`;
+
+        if (count === 0) {
+            emptyMsg.style.display = "block";
+            container.style.display = "none";
+            container.innerHTML = "";
+            return;
+        }
+
+        emptyMsg.style.display = "none";
+        container.style.display = "flex";
+        container.innerHTML = "";
+
+        // Reverse chronological order (latest record first)
+        const reversed = [...history].reverse();
+        reversed.forEach((item, idx) => {
+            const entry = document.createElement("div");
+            entry.className = "evidence-entry";
+
+            const isCorrect = Boolean(item.is_correct);
+            const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : `Attempt #${count - idx}`;
+            const eid = item.evidence_id || `ev_${count - idx}`;
+            const actId = item.activity_id || "diagnostic_check";
+            const conceptId = item.concept_id || "quantum";
+            const actObj = (activitiesList || []).find(a => a.activity_id === actId);
+            const friendlyTitle = actObj ? actObj.title : actId.replace(/^act_/, '').replace(/_/g, ' ');
+
+
+            entry.innerHTML = `
+                <div class="evidence-entry-header">
+                    <span class="evidence-entry-title">${friendlyTitle} <span style="font-size: 10px; color: var(--text-muted);">(${conceptId})</span></span>
+                    <span class="evidence-entry-outcome ${isCorrect ? 'correct' : 'incorrect'}">
+                        ${isCorrect ? '✓ Correct' : '✕ Needs Review'}
+                    </span>
+                </div>
+                <div class="evidence-entry-details">
+                    <span><strong>Learner Input:</strong> <code>${item.learner_response !== undefined ? item.learner_response : '—'}</code></span>
+                    ${item.target_outcome !== undefined ? `<span><strong>Target:</strong> <code>${item.target_outcome}</code></span>` : ''}
+                    <span><strong>Type:</strong> ${item.evidence_type || 'task_attempt'}</span>
+                    <span class="evidence-id-tag"><strong>ID:</strong> ${eid}</span>
+                    <span><strong>Logged:</strong> ${timeStr}</span>
+                </div>
+            `;
+            container.appendChild(entry);
+        });
+    }
+
+    // -------------------------------------------------------------------
+    // 9. Live Evidence Trace (Phase 10 & 5)
+    // -------------------------------------------------------------------
+    const TRACE_STEPS = ["input", "m3", "verified", "evidence", "m2", "decision", "m5"];
+    function resetLiveTrace() {
+        TRACE_STEPS.forEach(st => {
+            const node = document.getElementById(`traceNode-${st}`);
+            const detail = document.getElementById(`traceDetail-${st}`);
+            if (node) node.classList.remove("active", "done");
+            if (detail) detail.textContent = "—";
+        });
+        const msg = document.getElementById("traceStatusMessage");
+        if (msg) msg.textContent = "Awaiting learner submission...";
+    }
+
+    function updateLiveTrace(currentStage, details = {}) {
+        let reachedCurrent = false;
+        TRACE_STEPS.forEach(st => {
+            const node = document.getElementById(`traceNode-${st}`);
+            const detail = document.getElementById(`traceDetail-${st}`);
+            if (!node) return;
+
+            if (st === currentStage) {
+                node.classList.remove("done");
+                node.classList.add("active");
+                if (detail && details[st] !== undefined) detail.textContent = details[st];
+                reachedCurrent = true;
+            } else if (!reachedCurrent) {
+                node.classList.remove("active");
+                node.classList.add("done");
+                if (detail && details[st] !== undefined) detail.textContent = details[st];
+            } else {
+                node.classList.remove("active", "done");
+            }
+        });
+
+        const msg = document.getElementById("traceStatusMessage");
+        if (msg && details.message) {
+            msg.textContent = details.message;
+        }
+    }
+
+    // Demo Mode toggle
+    window.toggleDemoMode = function() {
+        isDemoMode = !isDemoMode;
+        const btn = document.getElementById("demoModeToggleBtn");
+        const bar = document.getElementById("demoModeNoticeBar");
+        const trace = document.getElementById("liveTraceCard");
+
+        if (isDemoMode) {
+            if (btn) btn.textContent = "⚡ Demo Mode: ON";
+            if (bar) bar.style.display = "flex";
+            if (trace) trace.style.display = "block";
+            resetLiveTrace();
+            const msg = document.getElementById("traceStatusMessage");
+            if (msg) msg.textContent = "Demo Guide: Try predicting '01' to observe deterministic remediation or '10' for direct mastery.";
+        } else {
+            if (btn) btn.textContent = "⚡ Demo Mode: OFF";
+            if (bar) bar.style.display = "none";
+            if (trace) trace.style.display = "none";
+        }
+    };
+
+    // -------------------------------------------------------------------
+    // 10. Navigation Tabs (Phase 9: Lab vs Learn)
+    // -------------------------------------------------------------------
+    window.switchMainTab = function(tabName) {
+        currentTab = tabName;
+        const labBtn = document.getElementById("tabBtnLab");
+        const learnBtn = document.getElementById("tabBtnLearn");
+        const workspace = document.querySelector(".workspace-layout");
+        const journey = document.getElementById("journeyBar");
+        const learnPane = document.getElementById("learnPaneView");
+
+        if (tabName === "lab") {
+            if (labBtn) labBtn.classList.add("active");
+            if (learnBtn) learnBtn.classList.remove("active");
+            if (workspace) workspace.style.display = "grid";
+            if (journey) journey.style.display = "flex";
+            if (learnPane) learnPane.style.display = "none";
+        } else {
+            if (labBtn) labBtn.classList.remove("active");
+            if (learnBtn) learnBtn.classList.add("active");
+            if (workspace) workspace.style.display = "none";
+            if (journey) journey.style.display = "none";
+            if (learnPane) learnPane.style.display = "flex";
+        }
+    };
+
+    window.switchToActivityFromLearn = function(target) {
+        if (!target) return;
+        let actId = Array.isArray(target) ? target[0] : target;
+        if (typeof actId === "string") {
+            const lower = actId.toLowerCase();
+            if (lower.includes("measure")) actId = "act_measurement_prob_diagnostic";
+            else if (lower.includes("superposition")) actId = "act_superposition_remediation";
+            else if (lower.includes("iteration") || lower.includes("amplitude")) actId = "act_grover_iteration_reasoning";
+            else if (lower.includes("grover") || lower.includes("qubit") || lower.includes("gate")) actId = "act_grover_2q_predict";
+        }
+        switchMainTab("lab");
+        loadActivity(actId);
+    };
+
+    // -------------------------------------------------------------------
+    // 11. Quick Quantum Readiness Check (Phase 8: Diagnostic Integration)
+    // -------------------------------------------------------------------
+    window.openReadinessModal = async function() {
+        const modal = document.getElementById("readinessModal");
+        const container = document.getElementById("readinessQuizContainer");
+        modal.style.display = "flex";
+        container.innerHTML = `<div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">Fetching diagnostic questions from backend...</div>`;
+        readinessAnswers = {};
+        document.getElementById("readinessProgressText").textContent = "0 of 4 answered";
+
+        try {
+            const data = await fetchDiagnosticReadiness();
+            readinessQuestions = data.questions || [];
+            renderReadinessQuestions();
+        } catch (err) {
+            container.innerHTML = `<div style="color: var(--red); font-size: 12px;">Failed to load diagnostic: ${err.message}</div>`;
+        }
+    };
+
+    window.closeReadinessModal = function() {
+        document.getElementById("readinessModal").style.display = "none";
+    };
+
+    function renderReadinessQuestions() {
+        const container = document.getElementById("readinessQuizContainer");
+        container.innerHTML = "";
+
+        readinessQuestions.forEach((q, idx) => {
+            const qId = q.id || q.question_id;
+            const qPrompt = q.question || q.prompt;
+            const card = document.createElement("div");
+            card.className = "readiness-q-card";
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 11px; font-family: var(--font-mono); color: var(--cyan); font-weight: 700;">Question ${idx + 1} of ${readinessQuestions.length} • Concept: ${q.concept_id}</span>
+                </div>
+                <div class="readiness-q-text">${qPrompt}</div>
+                <div class="readiness-options-grid" id="qGrid-${qId}"></div>
+            `;
+            const optGrid = card.querySelector(`#qGrid-${qId}`);
+            Object.entries(q.options || {}).forEach(([letter, text]) => {
+                const optBtn = document.createElement("button");
+                optBtn.type = "button";
+                optBtn.className = "readiness-option-btn";
+                optBtn.id = `opt-${qId}-${letter}`;
+                optBtn.innerHTML = `<strong>${letter}.</strong> <span>${text}</span>`;
+                optBtn.onclick = () => selectReadinessOption(qId, letter);
+                optGrid.appendChild(optBtn);
+            });
+            container.appendChild(card);
+        });
+    }
+
+    window.selectReadinessOption = function(qId, letter) {
+        readinessAnswers[qId] = letter;
+        const grid = document.getElementById(`qGrid-${qId}`);
+        if (grid) {
+            grid.querySelectorAll(".readiness-option-btn").forEach(btn => btn.classList.remove("selected"));
+            const selected = document.getElementById(`opt-${qId}-${letter}`);
+            if (selected) selected.classList.add("selected");
+        }
+        const answeredCount = Object.keys(readinessAnswers).length;
+        document.getElementById("readinessProgressText").textContent = `${answeredCount} of ${readinessQuestions.length} answered`;
+    };
+
+
+    window.handleSubmitReadinessCheck = async function() {
+        const total = readinessQuestions.length || 4;
+        const answeredCount = Object.keys(readinessAnswers).length;
+        if (answeredCount < total) {
+            if (!confirm(`You have answered ${answeredCount} of ${total} questions. Submit anyway?`)) {
+                return;
+            }
+        }
+
+        const submitBtn = document.getElementById("submitReadinessBtn");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Evaluating...";
+
+        const learnerId = document.getElementById("learnerIdInput").value.trim() || "demo_learner";
+
+        try {
+            const resp = await submitDiagnosticAnswers(learnerId, readinessAnswers);
+            closeReadinessModal();
+
+            // Fetch updated learner state and update UI
+            const st = await fetchLearnerState(learnerId);
+            currentLearnerState = st;
+            updateBadgeDisplays(st);
+            renderEvidenceHistory(st.evidence_history || []);
+
+            // Show banner in Learn view
+            const banner = document.getElementById("readinessResultBanner");
+            if (banner) {
+                banner.style.display = "flex";
+                const pct = Math.round((resp.score || 0) * 100);
+                document.getElementById("readinessScoreVal").textContent = `${resp.correct_count} / ${resp.total_questions} (${pct}%)`;
+                const action = resp.adaptive_decision?.action || "remediation";
+                const reason = resp.adaptive_decision?.reason || "Diagnostic evaluation complete";
+                document.getElementById("readinessM2Recommendation").textContent = `M2 Recommendation: ${action.toUpperCase()} — ${reason}`;
+                const proceedBtn = document.getElementById("readinessProceedBtn");
+                const targetAct = resp.adaptive_decision?.target;
+                if (targetAct) {
+                    proceedBtn.style.display = "block";
+                    proceedBtn.dataset.target = targetAct;
+                } else {
+                    proceedBtn.style.display = "none";
+                }
+
+            }
+        } catch (err) {
+            alert(`Diagnostic evaluation error: ${err.message}`);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Evaluate Readiness";
+        }
+    };
+
+    window.handleReadinessProceed = function() {
+        const proceedBtn = document.getElementById("readinessProceedBtn");
+        const target = proceedBtn?.dataset?.target;
+        if (target) {
+            switchToActivityFromLearn(target);
+        }
+    };
+
+    // -------------------------------------------------------------------
+    // 12. Learner ID & Session Management
+    // -------------------------------------------------------------------
     function initLearnerId() {
         let savedId = null;
-        try {
-            savedId = localStorage.getItem("qbit_current_learner_id");
-        } catch {}
+        if (typeof window !== "undefined" && window.location && window.location.search) {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get("learner_id")) {
+                savedId = urlParams.get("learner_id").trim();
+            }
+        }
+        if (!savedId) {
+            try {
+                savedId = localStorage.getItem("qbit_current_learner_id");
+            } catch {}
+        }
 
         if (!savedId) {
             const uuid = (typeof crypto !== "undefined" && crypto.randomUUID)
@@ -801,6 +1676,20 @@
         }
     }
 
+    window.handleLearnerIdChange = async function(newId) {
+        const id = newId.trim() || "demo_learner";
+        try {
+            localStorage.setItem("qbit_current_learner_id", id);
+            const st = await fetchLearnerState(id);
+            currentLearnerState = st;
+            updateBadgeDisplays(st);
+            renderEvidenceHistory(st.evidence_history || []);
+            renderJourneyTrack();
+        } catch (err) {
+            console.warn("Could not fetch state for learner id:", err);
+        }
+    };
+
     window.handleResetSession = function() {
         const uuid = (typeof crypto !== "undefined" && crypto.randomUUID)
             ? crypto.randomUUID()
@@ -815,22 +1704,45 @@
         } catch {}
         lastAdaptiveDecision = null;
         currentLearnerState = {};
+        resetTransientState();
+        renderEvidenceHistory([]);
+        updateBadgeDisplays({});
+        resetLiveTrace();
         loadProfileOnBoot();
         loadActivity("act_grover_2q_predict");
     };
 
     // -------------------------------------------------------------------
-    // 7. App Initialization & Curriculum Loading
+    // 13. App Initialization & Curriculum Loading
     // -------------------------------------------------------------------
     async function initApp() {
         try {
             initLearnerId();
+            const learnerId = document.getElementById("learnerIdInput").value.trim() || "demo_learner";
             activitiesList = await fetchActivities();
             renderJourneyTrack();
             loadProfileOnBoot();
-            updateBadgeDisplays({});
+            try {
+                const st = await fetchLearnerState(learnerId);
+                if (st) {
+                    currentLearnerState = st;
+                    renderEvidenceHistory(st.evidence_history || []);
+                }
+            } catch {}
+            updateBadgeDisplays(currentLearnerState);
             await loadActivity(currentActivityId);
+            if (typeof window !== "undefined" && window.location && window.location.search.includes("check_readiness")) {
+                await openReadinessModal();
+                selectReadinessOption("diag_qubits", "B");
+            }
+            if (typeof window !== "undefined" && window.location && window.location.search.includes("check_ask_ai")) {
+                openAskModal();
+            }
+
         } catch (err) {
+
+
+
             console.error("Failed to load initial activities:", err);
             showError(`Failed to load activities: ${err.message}`);
             document.getElementById("activityTitle").textContent = "Grover 2-Qubit Prediction";
@@ -848,7 +1760,7 @@
             return;
         }
 
-        // Active activity focus badge (replaces misleading "Step 1 of 4")
+        // Active activity focus badge
         const activeAct = activitiesList.find(a => a.activity_id === currentActivityId);
         const activeRole = activeAct ? getActivityRole(activeAct) : "challenge";
         const badgeEl = document.getElementById("journeyProgressBadge");
@@ -939,7 +1851,7 @@
             if (iterNode) advGroup.appendChild(iterNode);
             container.appendChild(advGroup);
         } else {
-            // Graceful fallback for any custom activity lists
+            // Fallback for custom activity lists
             activitiesList.forEach(act => {
                 const node = buildNode(act);
                 if (node) container.appendChild(node);
@@ -951,17 +1863,13 @@
         currentActivityId = activityId;
         renderJourneyTrack();
         closeErrorBanner();
+        resetTransientState();
 
-        // Reset outcome displays
-        document.getElementById("quantumResultsCard").style.display = "none";
-        document.getElementById("comparePanel").style.display = "none";
-        document.getElementById("stateInspectorDrawer").style.display = "none";
-        document.getElementById("evidenceOutcomeCard").style.display = "none";
-        document.getElementById("adaptiveDecisionCard").style.display = "none";
-        document.getElementById("aiGuidanceCard").style.display = "none";
-        selectedOptionLetter = null;
-        lastSubmitResult = null;
-        normalizedModel = null;
+        if (isDemoMode) {
+            resetLiveTrace();
+            const msg = document.getElementById("traceStatusMessage");
+            if (msg) msg.textContent = `Demo Guide: Active on ${activityId}. Choose prediction or response below.`;
+        }
 
         try {
             const act = await fetchActivity(activityId);
@@ -976,7 +1884,7 @@
             if (act.task_type === "quantum_prediction") {
                 document.getElementById("predictionInputSection").style.display = "flex";
                 document.getElementById("choiceInputSection").style.display = "none";
-                if (act.quantum_experiment) {
+                if (act.quantum_experiment && circuitStudio) {
                     circuitStudio.loadPreset("grover_2q");
                 }
             } else {
@@ -1030,6 +1938,12 @@
         progressBanner.style.display = "flex";
         progressText.textContent = "Executing quantum circuit on Qiskit Aer (1024 shots)...";
         closeErrorBanner();
+
+        // Live Evidence Trace - Step 1 & 2
+        updateLiveTrace("input", { input: learnerResponse, message: `1. Learner submitted: ${learnerResponse}` });
+        setTimeout(() => {
+            updateLiveTrace("m3", { m3: "Aer (1024)", message: "2. Executing canonical quantum circuit on Qiskit Aer..." });
+        }, 150);
 
         try {
             const rawResponse = await submitPrediction(currentActivityId, learnerId, learnerResponse);
@@ -1109,7 +2023,7 @@
             document.getElementById("inferredHypothesisDisplay").textContent = model.adaptive.hypothesisLabel;
             document.getElementById("evidenceIdDisplay").textContent = model.learner.evidenceId || "N/A";
 
-            // 3. Render "Why This Next?" Adaptive Decision Card
+            // 3. Render "Decision Evidence Inspector" Card (Phase 5)
             document.getElementById("adaptiveDecisionCard").style.display = "flex";
             document.getElementById("adaptiveActionBadge").textContent = model.adaptive.actionLabel;
             document.getElementById("decisionTriggerDisplay").textContent = model.adaptive.triggerLabel;
@@ -1143,8 +2057,9 @@
             if (targetAct) {
                 const targetTitle = (activitiesList.find(a => a.activity_id === targetAct)?.title) || targetAct;
                 document.getElementById("nextTargetActivityId").textContent = targetTitle;
-                document.getElementById("continueNextBtn").style.display = "inline-block";
-                document.getElementById("continueNextBtn").dataset.target = targetAct;
+                const continueBtn = document.getElementById("continueNextBtn");
+                continueBtn.style.display = "inline-block";
+                continueBtn.dataset.target = targetAct;
             } else {
                 document.getElementById("nextTargetActivityId").textContent = "End of Sequence (Curriculum Complete)";
                 document.getElementById("continueNextBtn").style.display = "none";
@@ -1153,6 +2068,31 @@
             // 4. Reveal AI Guidance Card
             document.getElementById("aiGuidanceCard").style.display = "flex";
             document.getElementById("aiExplanationText").textContent = 'Click "Explain My Result" for grounded AI explanation of this attempt.';
+
+            // 5. Update Live Trace - Steps 3-6 (Phase 10)
+            const measuredLabel = model.quantum ? model.quantum.mostLikelyStateLabel : (model.learner.isCorrect ? 'Match' : 'Mismatch');
+            const evidLabel = model.learner.evidenceId ? model.learner.evidenceId.split('_').slice(-1)[0] : 'Logged';
+            updateLiveTrace("decision", {
+                input: learnerResponse,
+                m3: "1024 shots",
+                verified: measuredLabel,
+                evidence: evidLabel,
+                m2: model.adaptive.hypothesisLabel.slice(0, 12),
+                decision: model.adaptive.actionLabel,
+                message: `6. M2 Decision: ${model.adaptive.actionLabel.toUpperCase()} → ${model.adaptive.reason}`
+            });
+
+            // 6. Fetch updated full learner state for evidence history audit trail
+            try {
+                const updatedState = await fetchLearnerState(learnerId);
+                if (updatedState) {
+                    currentLearnerState = updatedState;
+                    renderEvidenceHistory(updatedState.evidence_history || []);
+                    updateBadgeDisplays(updatedState);
+                }
+            } catch (err) {
+                console.warn("Could not fetch state update:", err);
+            }
 
         } catch (err) {
             showError(`Submission Error: ${err.message}`);
@@ -1177,6 +2117,12 @@
             const expBox = document.getElementById("aiExplanationText");
             expBox.innerHTML = formatGroundedMarkdown(exp.explanation);
             renderMath(expBox);
+
+            // Live Evidence Trace - Step 7
+            updateLiveTrace("m5", {
+                m5: "Grounded AI",
+                message: "7. M5 Grounded Guidance generated successfully."
+            });
         } catch (err) {
             document.getElementById("aiExplanationText").innerHTML = `<p class="ai-para">AI Guidance Notice: Grounded explanation is temporarily unavailable (${err.message}). Your verified quantum simulation result and adaptive progress remain safely recorded.</p>`;
         } finally {
@@ -1184,10 +2130,15 @@
         }
     };
 
+
     // Modal AI Question Inquirer
     window.openAskModal = function() {
         document.getElementById("askModal").style.display = "flex";
-        document.getElementById("askAnswerBox").style.display = "none";
+        const placeholder = document.getElementById("askPlaceholder");
+        const box = document.getElementById("askAnswerBox");
+        if (box && !box.dataset.hasAnswer) {
+            if (placeholder) placeholder.style.display = "flex";
+        }
     };
     window.closeAskModal = function() {
         document.getElementById("askModal").style.display = "none";
@@ -1196,20 +2147,25 @@
         const q = document.getElementById("askQuestionInput").value.trim();
         if (!q) return;
         const btn = document.getElementById("askSubmitBtn");
+        const placeholder = document.getElementById("askPlaceholder");
+        const box = document.getElementById("askAnswerBox");
+
         btn.disabled = true; btn.textContent = "Consulting Curriculum...";
+        if (placeholder) placeholder.style.display = "none";
+        box.innerHTML = `<div style="display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 13px; font-family: var(--font-mono); padding: 12px 0;"><span class="spinner-small" style="width: 14px; height: 14px; border: 2px solid var(--panel-border); border-top-color: var(--cyan); border-radius: 50%; display: inline-block; animation: spin 0.8s linear infinite;"></span> Consulting curriculum and quantum mechanics context...</div>`;
 
         try {
             const res = await askConceptualQuestion(q, currentActivityData?.concept_id || null);
-            const box = document.getElementById("askAnswerBox");
-            box.style.display = "block";
+            box.dataset.hasAnswer = "true";
             box.innerHTML = formatGroundedMarkdown(res.answer);
             renderMath(box);
         } catch (err) {
-            showError(`Question error: ${err.message}`);
+            box.innerHTML = `<p style="color: var(--red); font-size: 13px;">Guidance notice: ${err.message}</p>`;
         } finally {
             btn.disabled = false; btn.textContent = "Inquire";
         }
     };
+
 
     window.toggleTheme = function() {
         toggleThemeFromModal();

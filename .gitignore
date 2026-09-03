@@ -208,3 +208,6 @@ data/local/
 
 # Local logs
 logs/
+
+# Generated LaTeX build artifacts and manuals
+latex/

@@ -67,16 +67,17 @@ MVP_ACTIVITIES: dict[str, Activity] = {
         task_type="conceptual_choice",
         prerequisites=["quantum.state"],
         prompt=(
-            "In a quantum experiment with target state |10⟩ where the state amplitude is approximately 0.968, "
-            "what does the final measurement distribution represent?"
+            "In a general quantum search experiment where a target state |10⟩ has an amplitude of approximately 0.968 "
+            "(such as with rotation errors or in higher-qubit search spaces), what does the final measurement distribution represent?"
         ),
         options={
             "A": "A deterministic certainty that never produces any other state in finite shots",
-            "B": "A probabilistic outcome where |10⟩ has ~93.7% probability of being measured across shots",
+            "B": "A probabilistic outcome where |10⟩ has ~93.7% probability of being measured across shots (since P = |0.968|² ≈ 0.937)",
             "C": "The circuit destroying quantum information and returning classical 00 always",
             "D": "Two classical bits existing simultaneously without state collapse",
         },
         expected_answer="B",
+
         remediation_activity_id="act_superposition_remediation",
         next_activity_id="act_grover_2q_predict",
     ),

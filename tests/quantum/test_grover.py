@@ -63,4 +63,32 @@ def test_grover_circuit_validates_target_state_characters():
 def test_grover_circuit_validates_min_qubits():
     with pytest.raises(ValueError, match="qubits"):
         build_grover_circuit(num_qubits=1, target_state="1")
-
+
+
+def test_canonical_grover_2q_target_10_exactness_and_aer_simulation():
+    """
+    Regression Test for Canonical 2-Qubit Grover Search (Target |10>):
+      1. Ideal statevector probability for |10> is exactly 1.0 (100.0%)
+      2. Ideal probabilities for all other states (|00>, |01>, |11>) are strictly 0.0
+      3. AerSimulator 1024-shot empirical counts concentrate completely on '10' (1024/1024)
+      4. Verifies Qiskit bit ordering/endianness: '10' maps to q1=1, q0=0
+    """
+    from qiskit.quantum_info import Statevector
+    from backend.quantum.execution import execute_circuit
+
+    circ = build_grover_circuit(num_qubits=2, target_state="10", iterations=1)
+
+    # 1. Statevector exactness (ideal quantum mechanics)
+    circ_no_meas = circ.remove_final_measurements(inplace=False)
+    sv = Statevector.from_instruction(circ_no_meas)
+    probs = sv.probabilities_dict()
+
+    assert pytest.approx(probs.get("10", 0.0), abs=1e-7) == 1.0
+    assert pytest.approx(probs.get("00", 0.0), abs=1e-7) == 0.0
+    assert pytest.approx(probs.get("01", 0.0), abs=1e-7) == 0.0
+    assert pytest.approx(probs.get("11", 0.0), abs=1e-7) == 0.0
+
+    # 2. Qiskit Aer simulation with 1024 shots
+    counts = execute_circuit(circ, shots=1024)
+    assert counts == {"10": 1024}
+    assert counts.get("10") == 1024

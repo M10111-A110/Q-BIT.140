@@ -4,7 +4,11 @@
  * Never stores or transmits Supabase credentials.
  */
 
-const API_BASE = window.QBIT_API_BASE || "/api";
+const API_BASE = window.QBIT_API_BASE || (
+    typeof window !== "undefined" && window.location && window.location.port && window.location.port !== "8000" && window.location.protocol.startsWith("http")
+        ? `${window.location.protocol}//${window.location.hostname}:8000/api`
+        : "/api"
+);
 
 /**
  * Fetch all registered activities in curriculum order.
@@ -105,6 +109,54 @@ export async function askConceptualQuestion(question, conceptId = null, learnerC
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.detail || `Question request failed: HTTP ${res.status}`);
+    }
+    return await res.json();
+}
+
+/**
+ * Fetch questions for the Quick Quantum Readiness Check.
+ * @returns {Promise<Object>}
+ */
+export async function fetchDiagnosticReadiness() {
+    const res = await fetch(`${API_BASE}/diagnostic/readiness_check`);
+    if (!res.ok) {
+        throw new Error(`Failed to fetch diagnostic questions: HTTP ${res.status}`);
+    }
+    return await res.json();
+}
+
+/**
+ * Submit answers to the Quick Quantum Readiness Check.
+ * Ingests evidence into M2 and persists updated state.
+ * @param {string} learnerId
+ * @param {Object} answers { [questionId]: chosenOptionLetter }
+ * @returns {Promise<Object>}
+ */
+export async function submitDiagnosticAnswers(learnerId, answers) {
+    const res = await fetch(`${API_BASE}/diagnostic/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            learner_id: learnerId,
+            answers: answers,
+        }),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Diagnostic submission failed: HTTP ${res.status}`);
+    }
+    return await res.json();
+}
+
+/**
+ * Fetch authoritative persistent learner state and evidence history.
+ * @param {string} learnerId
+ * @returns {Promise<Object>}
+ */
+export async function fetchLearnerState(learnerId) {
+    const res = await fetch(`${API_BASE}/learner/${encodeURIComponent(learnerId)}/state`);
+    if (!res.ok) {
+        throw new Error(`Failed to fetch learner state: HTTP ${res.status}`);
     }
     return await res.json();
 }

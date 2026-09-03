@@ -92,3 +92,64 @@ class ExplainExperimentResponse(BaseModel):
     explanation: str
     learner_response: str
     adaptive_decision: dict[str, Any]
+
+
+class DiagnosticQuestionItem(BaseModel):
+    """Diagnostic readiness check question schema."""
+    id: str
+    question_id: str | None = None
+    topic: str
+    concept_id: str
+    question: str
+    prompt: str | None = None
+    options: dict[str, str]
+    difficulty: str
+
+
+
+class DiagnosticReadinessResponse(BaseModel):
+    """List of questions for Quick Quantum Readiness Check."""
+    title: str = "Quick Quantum Readiness Check"
+    description: str = "Concise diagnostic check assessing foundational quantum concepts."
+    questions: list[DiagnosticQuestionItem]
+
+
+class DiagnosticSubmitRequest(BaseModel):
+    """Learner submission for diagnostic readiness check."""
+    learner_id: str = Field(..., min_length=1, description="Unique identifier for the learner")
+    answers: dict[str, str] = Field(..., description="Mapping of question id to chosen letter (A, B, C, D)")
+
+
+class DiagnosticQuestionResult(BaseModel):
+    """Evaluated single question result from readiness check."""
+    question_id: str
+    topic: str
+    concept_id: str
+    question: str
+    chosen: str
+    correct_answer: str
+    is_correct: bool
+    explanation: str
+    evidence_id: str
+
+
+class DiagnosticSubmitResponse(BaseModel):
+    """Structured response from diagnostic readiness check evaluation."""
+    learner_id: str
+    score: float
+    total_questions: int
+    correct_count: int
+    results: list[DiagnosticQuestionResult]
+    learner_state: dict[str, Any]
+    adaptive_decision: dict[str, Any]
+
+
+class LearnerStateResponse(BaseModel):
+    """Learner state and evidence history response."""
+    user_id: str
+    concept_scores: dict[str, float] = Field(default_factory=dict)
+    attempts: dict[str, int] = Field(default_factory=dict)
+    errors: dict[str, list[str]] = Field(default_factory=dict)
+    score_history: dict[str, list[float]] = Field(default_factory=dict)
+    evidence_history: list[dict[str, Any]] = Field(default_factory=list)
+    gap_inferences: dict[str, dict[str, Any]] = Field(default_factory=dict)
