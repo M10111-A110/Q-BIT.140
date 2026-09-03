@@ -202,7 +202,7 @@ header {
     box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.40), 0 0 20px var(--cyan-glow);
 }
 
-/* JOURNEY TRACK */
+/* JOURNEY TRACK & ADAPTIVE FLOW */
 .journey-bar {
     background: var(--glass-2);
     backdrop-filter: blur(12px);
@@ -212,12 +212,12 @@ header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
     overflow-x: auto;
     position: relative;
     z-index: 5;
 }
-.journey-left { display: flex; align-items: center; gap: 12px; }
+.journey-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .journey-title {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -225,11 +225,63 @@ header {
     text-transform: uppercase;
     white-space: nowrap;
 }
-.journey-steps { display: flex; align-items: center; gap: 8px; }
-.journey-node {
-    padding: 5px 13px;
+.journey-steps {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px 0;
+}
+
+/* Branch Groups & Subtracks */
+.journey-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.journey-subtrack {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(245, 158, 11, 0.05);
+    padding: 3px 8px;
     border-radius: 999px;
-    font-size: 12px;
+    border: 1px dashed rgba(245, 158, 11, 0.28);
+}
+
+/* Branch Connectors & Labels */
+.journey-connector {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    user-select: none;
+    white-space: nowrap;
+}
+.journey-connector.remediation-branch {
+    color: var(--yellow);
+    background: rgba(245, 158, 11, 0.10);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.journey-connector.inline-subtrack {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+.journey-connector.advance-branch {
+    color: var(--green);
+    background: rgba(16, 185, 129, 0.10);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* Journey Node Card / Pill */
+.journey-node {
+    padding: 5px 12px;
+    border-radius: 999px;
     font-family: var(--font-mono);
     background: var(--panel);
     border: 1px solid var(--panel-border);
@@ -238,25 +290,131 @@ header {
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 .journey-node:hover {
     border-color: var(--cyan);
     transform: translateY(-1px);
 }
-.journey-node.active {
-    border-color: var(--cyan);
+.journey-node-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.journey-node-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+/* Role Pills */
+.journey-role-pill {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.journey-role-pill.role-challenge {
+    background: rgba(59, 130, 246, 0.2);
     color: var(--cyan);
-    font-weight: 600;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+.journey-role-pill.role-remediation {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--yellow);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.journey-role-pill.role-foundation {
+    background: rgba(168, 85, 247, 0.2);
+    color: var(--purple);
+    border: 1px solid rgba(168, 85, 247, 0.4);
+}
+.journey-role-pill.role-advancement {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--green);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+/* Status Pills */
+.journey-status-pill {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.journey-status-pill.status-active {
+    background: var(--cyan);
+    color: #0b0f19;
+}
+.journey-status-pill.status-mastered {
+    background: rgba(16, 185, 129, 0.25);
+    color: var(--green);
+    border: 1px solid var(--green);
+}
+.journey-status-pill.status-remediation_target {
+    background: rgba(245, 158, 11, 0.25);
+    color: var(--yellow);
+    border: 1px solid var(--yellow);
+    animation: statusPulse 1.8s ease-in-out infinite;
+}
+.journey-status-pill.status-next_target {
+    background: rgba(16, 185, 129, 0.25);
+    color: var(--green);
+    border: 1px solid var(--green);
+    animation: statusPulse 1.8s ease-in-out infinite;
+}
+.journey-status-pill.status-idle {
+    display: none; /* Keep display concise when idle */
+}
+
+/* Semantic Node State Borders & Glows */
+.journey-node.active,
+.journey-node.status-active {
+    border-color: var(--cyan);
     box-shadow: 0 0 12px var(--cyan-glow);
     background: rgba(34, 211, 238, 0.12);
 }
-.journey-node.completed {
+.journey-node.role-remediation.status-active {
+    border-color: var(--yellow);
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+    background: rgba(245, 158, 11, 0.14);
+}
+.journey-node.role-foundation.status-active {
+    border-color: var(--purple);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
+    background: rgba(168, 85, 247, 0.14);
+}
+.journey-node.role-advancement.status-active {
     border-color: var(--green);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+    background: rgba(16, 185, 129, 0.14);
+}
+.journey-node.completed,
+.journey-node.status-mastered {
+    border-color: rgba(16, 185, 129, 0.6);
     color: var(--green);
     background: rgba(16, 185, 129, 0.10);
 }
-.journey-arrow { color: var(--text-muted); font-size: 11px; }
+.journey-node.status-remediation_target {
+    border-color: var(--yellow);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+    background: rgba(245, 158, 11, 0.12);
+}
+.journey-node.status-next_target {
+    border-color: var(--green);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.12);
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.75; transform: scale(1.03); }
+}
+
 .journey-progress-badge {
     font-family: var(--font-mono);
     font-size: 11px;

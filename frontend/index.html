@@ -64,15 +64,15 @@
     <button style="background: none; border: none; color: var(--red); cursor: pointer; font-size: 14px;" onclick="closeErrorBanner()">✕</button>
 </div>
 
-<!-- CURRICULUM JOURNEY TRACK (REQUIREMENT 5) -->
+<!-- ADAPTIVE JOURNEY TRACK -->
 <div class="journey-bar">
     <div class="journey-left">
-        <span class="journey-title">Curriculum Path:</span>
+        <span class="journey-title">Adaptive Path:</span>
         <div class="journey-steps" id="journeySteps">
             <!-- Dynamically rendered activity nodes -->
         </div>
     </div>
-    <div class="journey-progress-badge" id="journeyProgressBadge">Step 1 of 4</div>
+    <div class="journey-progress-badge" id="journeyProgressBadge">Route: Challenge</div>
 </div>
 
 <!-- WORKSPACE LAYOUT -->
@@ -448,7 +448,7 @@
 
 <script type="module">
     import { fetchActivities, fetchActivity, submitPrediction, explainExperiment, askConceptualQuestion } from './js/api_client.js';
-    import { normalizeSubmissionResponse, formatStateLabel, formatPercentage, computeBadgeMetrics, getLearnerProfile, saveLearnerProfile } from './js/adapter.js';
+    import { normalizeSubmissionResponse, formatStateLabel, formatPercentage, computeBadgeMetrics, getLearnerProfile, saveLearnerProfile, getActivityRole, getActivityStatus, formatRoleLabel, formatStatusLabel } from './js/adapter.js';
     import { CircuitStudio, GATE_DEFINITIONS } from './js/circuit_view.js';
 
     let activitiesList = [];
@@ -459,6 +459,7 @@
     let normalizedModel = null;
     let circuitStudio = null;
     let currentLearnerState = {};
+    let lastAdaptiveDecision = null;
 
     // -------------------------------------------------------------------
     // 1. Particle Cloud Background Animation (Non-blocking & graceful)
@@ -812,6 +813,8 @@
         try {
             localStorage.setItem("qbit_current_learner_id", newLearnerId);
         } catch {}
+        lastAdaptiveDecision = null;
+        currentLearnerState = {};
         loadProfileOnBoot();
         loadActivity("act_grover_2q_predict");
     };
@@ -837,27 +840,111 @@
 
     function renderJourneyTrack() {
         const container = document.getElementById("journeySteps");
+        if (!container) return;
         container.innerHTML = "";
-        const curIdx = activitiesList.findIndex(a => a.activity_id === currentActivityId);
-        document.getElementById("journeyProgressBadge").textContent = `Step ${curIdx >= 0 ? curIdx + 1 : 1} of ${activitiesList.length || 4}`;
 
-        activitiesList.forEach((act, idx) => {
+        if (!activitiesList || activitiesList.length === 0) {
+            container.innerHTML = `<span style="color: var(--text-muted); font-size: 11px; font-family: var(--font-mono);">Loading activities...</span>`;
+            return;
+        }
+
+        // Active activity focus badge (replaces misleading "Step 1 of 4")
+        const activeAct = activitiesList.find(a => a.activity_id === currentActivityId);
+        const activeRole = activeAct ? getActivityRole(activeAct) : "challenge";
+        const badgeEl = document.getElementById("journeyProgressBadge");
+        if (badgeEl) {
+            badgeEl.textContent = `Route: ${formatRoleLabel(activeRole)}`;
+        }
+
+        // Helper to construct a semantic activity node
+        function buildNode(act) {
+            if (!act) return null;
+            const role = getActivityRole(act);
+            const status = getActivityStatus(act.activity_id, currentActivityId, currentLearnerState, lastAdaptiveDecision);
+            const roleLabel = formatRoleLabel(role);
+            const statusLabel = formatStatusLabel(status);
+
+            let shortName = act.title;
+            if (act.activity_id === "act_grover_2q_predict") shortName = "Grover 2Q";
+            else if (act.activity_id === "act_measurement_prob_diagnostic") shortName = "Measurement";
+            else if (act.activity_id === "act_superposition_remediation") shortName = "Superposition";
+            else if (act.activity_id === "act_grover_iteration_reasoning") shortName = "Grover Iteration";
+            else shortName = act.title.split(" ").slice(0, 2).join(" ");
+
             const node = document.createElement("div");
-            const isCur = act.activity_id === currentActivityId;
-            const isCompleted = idx < curIdx;
-            node.className = `journey-node ${isCur ? 'active' : ''} ${isCompleted ? 'completed' : ''}`;
-            node.innerHTML = `<span>${idx + 1}.</span> <span>${act.title.split(' ')[0]}</span>`;
-            node.title = act.title;
+            node.className = `journey-node role-${role} status-${status} ${status === 'active' ? 'active' : ''} ${status === 'mastered' ? 'completed' : ''}`;
+            node.title = `${act.title}\nRole: ${roleLabel}\nStatus: ${statusLabel}`;
             node.onclick = () => loadActivity(act.activity_id);
-            container.appendChild(node);
 
-            if (idx < activitiesList.length - 1) {
-                const arr = document.createElement("span");
-                arr.className = "journey-arrow";
-                arr.textContent = "→";
-                container.appendChild(arr);
-            }
-        });
+            node.innerHTML = `
+                <div class="journey-node-main">
+                    <span class="journey-node-name">${shortName}</span>
+                    <span class="journey-role-pill role-${role}">${roleLabel.toUpperCase()}</span>
+                </div>
+                <span class="journey-status-pill status-${status}">${statusLabel.toUpperCase()}</span>
+            `;
+            return node;
+        }
+
+        // Standard MVP activities mapping
+        const groverAct = activitiesList.find(a => a.activity_id === "act_grover_2q_predict");
+        const measureAct = activitiesList.find(a => a.activity_id === "act_measurement_prob_diagnostic");
+        const superAct = activitiesList.find(a => a.activity_id === "act_superposition_remediation");
+        const iterAct = activitiesList.find(a => a.activity_id === "act_grover_iteration_reasoning");
+
+        if (groverAct && measureAct && superAct && iterAct) {
+            // 1. Core Challenge Group
+            const coreGroup = document.createElement("div");
+            coreGroup.className = "journey-group core-group";
+            const groverNode = buildNode(groverAct);
+            if (groverNode) coreGroup.appendChild(groverNode);
+            container.appendChild(coreGroup);
+
+            // 2. Remediation Branch Connector
+            const remedConnector = document.createElement("div");
+            remedConnector.className = "journey-connector remediation-branch";
+            remedConnector.title = "Adaptive branch: triggered by M2 on repeated prediction errors";
+            remedConnector.innerHTML = `<span>⤹</span> <span>on error</span>`;
+            container.appendChild(remedConnector);
+
+            // 3. Remediation Sub-Track (Measurement Diagnostic & Superposition Foundation)
+            const remedSubtrack = document.createElement("div");
+            remedSubtrack.className = "journey-subtrack";
+
+            const measureNode = buildNode(measureAct);
+            if (measureNode) remedSubtrack.appendChild(measureNode);
+
+            const inlineConn = document.createElement("div");
+            inlineConn.className = "journey-connector inline-subtrack";
+            inlineConn.title = "Prerequisite foundation review";
+            inlineConn.innerHTML = `<span>→</span> <span>if needed</span>`;
+            remedSubtrack.appendChild(inlineConn);
+
+            const superNode = buildNode(superAct);
+            if (superNode) remedSubtrack.appendChild(superNode);
+
+            container.appendChild(remedSubtrack);
+
+            // 4. Advancement Branch Connector
+            const advConnector = document.createElement("div");
+            advConnector.className = "journey-connector advance-branch";
+            advConnector.title = "Advancement: unlocked when Grover prediction is mastered";
+            advConnector.innerHTML = `<span>↗</span> <span>on success</span>`;
+            container.appendChild(advConnector);
+
+            // 5. Advancement Group
+            const advGroup = document.createElement("div");
+            advGroup.className = "journey-group advancement-group";
+            const iterNode = buildNode(iterAct);
+            if (iterNode) advGroup.appendChild(iterNode);
+            container.appendChild(advGroup);
+        } else {
+            // Graceful fallback for any custom activity lists
+            activitiesList.forEach(act => {
+                const node = buildNode(act);
+                if (node) container.appendChild(node);
+            });
+        }
     }
 
     window.loadActivity = async function(activityId) {
@@ -954,6 +1041,10 @@
                 currentLearnerState = model.learnerState;
                 updateBadgeDisplays(currentLearnerState);
             }
+            if (rawResponse.adaptive_decision) {
+                lastAdaptiveDecision = rawResponse.adaptive_decision;
+            }
+            renderJourneyTrack();
 
             // 1. Render Quantum Simulation Result & State Triad
             if (model.quantum) {

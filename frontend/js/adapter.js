@@ -331,3 +331,137 @@ export function saveLearnerProfile(learnerId = "demo_learner", profile = {}) {
         // ignore localStorage access error
     }
 }
+
+/**
+ * Pedagogical role classifier for curriculum activities.
+ * Returns one of: "challenge" | "remediation" | "foundation" | "advancement".
+ * Uses existing activity metadata without creating a parallel curriculum system.
+ * @param {Object} activity
+ * @returns {string}
+ */
+export function getActivityRole(activity) {
+    if (!activity) return "challenge";
+    const id = activity.activity_id || "";
+    if (id === "act_grover_2q_predict") return "challenge";
+    if (id === "act_measurement_prob_diagnostic") return "remediation";
+    if (id === "act_superposition_remediation") return "foundation";
+    if (id === "act_grover_iteration_reasoning") return "advancement";
+
+    // Metadata-driven fallbacks
+    if (activity.task_type === "quantum_prediction") return "challenge";
+    if (activity.prerequisites?.includes("grover.search_problem")) return "advancement";
+    if (activity.concept_id === "quantum.superposition") return "foundation";
+    if (activity.concept_id === "quantum.measurement") return "remediation";
+    return "challenge";
+}
+
+/**
+ * Format activity pedagogical role to learner-facing label.
+ * @param {string} role
+ * @returns {string}
+ */
+export function formatRoleLabel(role) {
+    switch (role) {
+        case "challenge":
+            return "Challenge";
+        case "remediation":
+            return "Remediation";
+        case "foundation":
+            return "Foundation";
+        case "advancement":
+            return "Advancement";
+        default:
+            return String(role || "Challenge");
+    }
+}
+
+/**
+ * Determine the runtime semantic state of an activity for the active learner.
+ * Returns one of: "active" | "remediation_target" | "next_target" | "mastered" | "idle".
+ * Priority order:
+ *   1. active
+ *   2. remediation_target
+ *   3. next_target
+ *   4. mastered
+ *   5. idle
+ * Uses authoritative backend state and decisions without client-side guessing.
+ * @param {string} activityId
+ * @param {string} currentActivityId
+ * @param {Object} learnerState
+ * @param {Object} adaptiveDecision
+ * @returns {string}
+ */
+export function getActivityStatus(activityId, currentActivityId, learnerState = {}, adaptiveDecision = null) {
+    // 1. Priority 1: Currently active activity
+    if (activityId === currentActivityId) {
+        return "active";
+    }
+
+    // 2. Priority 2: Recommended remediation target chosen by M2
+    if (
+        adaptiveDecision &&
+        adaptiveDecision.action === "targeted_remediation" &&
+        adaptiveDecision.target === activityId
+    ) {
+        return "remediation_target";
+    }
+
+    // 3. Priority 3: Recommended next advancement / retry target chosen by M2
+    if (
+        adaptiveDecision &&
+        adaptiveDecision.action === "advance" &&
+        adaptiveDecision.target === activityId
+    ) {
+        return "next_target";
+    }
+
+    // 4. Priority 4: Mastered based on authoritative evidence and state
+    const evidenceHistory = learnerState.evidence_history || [];
+    const hasCorrectAttempt = evidenceHistory.some(
+        e => e.activity_id === activityId && Boolean(e.is_correct)
+    );
+
+    const conceptMapping = {
+        "act_grover_2q_predict": "grover.search_problem",
+        "act_measurement_prob_diagnostic": "quantum.measurement",
+        "act_superposition_remediation": "quantum.superposition",
+        "act_grover_iteration_reasoning": "grover.amplitude_amplification",
+    };
+    const conceptId = conceptMapping[activityId];
+    const gapInf = learnerState.gap_inferences?.[conceptId];
+    const isConceptMastered = gapInf && (gapInf.status === "mastered" || gapInf.status === "improving");
+
+    // Also check concept scores if recorded
+    const conceptScores = learnerState.concept_scores || {};
+    const hasHighScore = Object.entries(conceptScores).some(
+        ([topic, score]) => (topic === conceptId || topic.toLowerCase().includes(activityId.replace("act_", "").split("_")[0])) && Number(score) >= 0.8
+    );
+
+    if (hasCorrectAttempt || isConceptMastered || hasHighScore) {
+        return "mastered";
+    }
+
+    // 5. Priority 5: Idle
+    return "idle";
+}
+
+/**
+ * Format activity runtime status to clear human badge text.
+ * @param {string} status
+ * @returns {string}
+ */
+export function formatStatusLabel(status) {
+    switch (status) {
+        case "active":
+            return "Active";
+        case "remediation_target":
+            return "Recommended";
+        case "next_target":
+            return "Up Next";
+        case "mastered":
+            return "Mastered";
+        case "idle":
+        default:
+            return "Idle";
+    }
+}
