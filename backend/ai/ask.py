@@ -43,7 +43,12 @@ Rules:
 - Keep explanations clear and beginner-friendly, correcting common
   misconceptions gently when relevant.
 """
-
+OUT_OF_SCOPE_MESSAGE = (
+    "That question doesn't seem related to the Q-BIT curriculum "
+    "(Grover's Algorithm and its math/quantum prerequisites). "
+    "Try rephrasing, or ask about qubits, gates, circuits, probability, "
+    "or Grover's algorithm specifically."
+)
 
 def _format_simulation_result(result: dict) -> str:
     circuit = result.get("circuit", {})
@@ -64,6 +69,8 @@ def ask_question(question: str, simulation_result: dict = None) -> str:
     #Searches relevant keywords from knowledge folder 
     '''answer "grounded" in our actual curriculum instead of just whatever the model happens to know generally about quantum computing.'''
     context = find_relevant_knowledge(question, top_n=2)
+    if not context and not simulation_result:
+        return OUT_OF_SCOPE_MESSAGE
 
     evidence_block = ""
     if simulation_result:
@@ -87,17 +94,21 @@ Answer the learner's question using the curriculum context (and the
 verified simulation result, if provided) above."""
 
     # Step 3: send to the AI model
-    response = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
-    '''The API returns a complex object with lots of metadata (tokencounts, timing, etc).
-    We only care about the actual text reply,'''
-    return response.choices[0].message.content
-
+    try:
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+    except GroqError as e:
+        return f"Sorry, the AI service couldn't be reached right now ({e}). Please try again in a moment."
+    
+    answer = response.choices[0].message.content
+    if not answer:
+        return "Sorry, I couldn't generate an answer for that. Try rephrasing your question."
+    return answer
 
 if __name__ == "__main__":
     fake_result = {

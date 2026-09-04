@@ -1,6 +1,7 @@
 import os
 import re
 KNOWLEDGE_DIR = os.path.join(os.path.dirname(__file__), "knowledge")
+MIN_RELEVANCE_SCORE=3
 def _load_knowledge_files():
     files = {}
     for filename in sorted(os.listdir(KNOWLEDGE_DIR)):
@@ -40,7 +41,8 @@ def find_relevant_knowledge(question: str, top_n: int = 2) -> str:
     scored.sort(key=lambda x: x[0], reverse=True)
 
     top_matches = scored[:top_n]
-
+    if not top_matches or top_matches[0][0]<MIN_RELEVANCE_SCORE:
+        return ""
     combined = ""
     for score, filename, text in top_matches:
         combined += f"\n\n--- From {filename} ---\n{text}"
@@ -48,8 +50,13 @@ def find_relevant_knowledge(question: str, top_n: int = 2) -> str:
     return combined.strip()
 
 if __name__ == "__main__":
-    test_question = "why did grover not give 100 percent probability"
-    result = find_relevant_knowledge(test_question)
-    print(f"Question: {test_question}\n")
-    print("Matched knowledge:")
-    print(result[:500] + "...\n[truncated for preview]")
+    for test_question in [
+        "why did grover not give 100 percent probability",
+        "what's the weather like today",  # should trigger no-match
+    ]:
+        result = find_relevant_knowledge(test_question)
+        print(f"Question: {test_question}")
+        if result:
+            print(f"Matched: {result[:150]}...\n")
+        else:
+            print("No confident match found.\n")
