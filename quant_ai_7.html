@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quanta — Learn Quantum Mechanics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Renders the tutor's answers properly: marked.js turns Markdown
+     (**bold**, lists, etc.) into real HTML, KaTeX turns LaTeX math
+     ($x^2$, \hbar, etc.) into rendered symbols instead of raw text. -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root{
+    --bg:        #03050F;
+    --bg2:       #060A1E;
+    --glass:     rgba(16, 23, 54, 0.55);
+    --glass-2:   rgba(22, 31, 68, 0.65);
+    --border:    rgba(91, 140, 255, 0.18);
+    --border-hi: rgba(91, 140, 255, 0.5);
+    --text:      #EAF0FF;
+    --text-soft: #7C88B8;
+
+    --blue:      #3B82F6;
+    --blue-glow: rgba(59,130,246,.45);
+    --cyan:      #22D3EE;
+    --cyan-glow: rgba(34,211,238,.4);
+    --gold:      #FFC845;
+    --flame:     #FF7A45;
+
+    --font-display: "Space Grotesk", sans-serif;
+    --font-body: "Inter", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+    --radius: 16px;
+  }
+
+  body.light-mode{
+    --bg:        #F3F6FF;
+    --bg2:       #E9EEFC;
+    --glass:     rgba(255, 255, 255, 0.7);
+    --glass-2:   rgba(255, 255, 255, 0.9);
+    --border:    rgba(59, 130, 246, 0.2);
+    --border-hi: rgba(59, 130, 246, 0.45);
+    --text:      #0B1020;
+    --text-soft: #5B638A;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 60% 40% at 15% 0%, rgba(59,130,246,.16), transparent 60%),
+      radial-gradient(ellipse 50% 35% at 90% 15%, rgba(34,211,238,.10), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 50% 100%, rgba(59,130,246,.08), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    position: relative;
+    overflow-x:hidden;
+    transition: background .3s ease, color .3s ease;
+  }
+
+  #fx{ position: fixed; inset:0; z-index:0; pointer-events:none; }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 0 28px; position:relative; z-index:1; }
+  h1,h2,h3{ font-family: var(--font-display); margin:0; letter-spacing: -0.01em; }
+  a{ color: inherit; }
+  button{ font-family: var(--font-body); cursor:pointer; }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 22px 0;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .atom{ width:38px; height:38px; position:relative; filter: drop-shadow(0 0 8px var(--blue-glow)); }
+  .atom svg{ width:100%; height:100%; }
+  .atom .orbit{ transform-origin: 17px 17px; animation: spin 6s linear infinite; }
+  .atom .orbit.o2{ animation-duration: 9s; animation-direction: reverse; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce){ .atom .orbit{ animation: none; } }
+  .brand-name{
+    font-family: var(--font-display); font-weight:700; font-size: 21px;
+    background: linear-gradient(90deg, #fff, var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .brand-tag{ font-family: var(--font-mono); font-size: 11px; color: var(--text-soft); display:block; margin-top:-2px; }
+
+  .top-right{ display:flex; align-items:center; gap:14px; }
+  .chip{
+    display:flex; align-items:center; gap:7px;
+    background: var(--glass); border: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    padding: 8px 14px; border-radius: 999px;
+    font-family: var(--font-mono); font-size: 13px;
+  }
+  .chip svg{ width:16px; height:16px; }
+
+  .profile-btn{
+    width: 42px; height:42px; border-radius:50%;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    background-size: cover; background-position:center;
+    border: none; color:#03050F; font-family: var(--font-display); font-weight:700;
+    font-size: 14px; display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.12), 0 0 18px var(--blue-glow);
+  }
+
+  /* ---------- hero ---------- */
+  .hero{ padding: 40px 0 50px; text-align:left; }
+  .eyebrow{
+    font-family: var(--font-mono); font-size: 12px; letter-spacing:.08em; text-transform: uppercase;
+    color: var(--cyan);
+  }
+  .hero h1{
+    font-size: clamp(32px, 4.6vw, 50px); margin-top: 12px; max-width: 17ch; line-height: 1.08;
+    background: linear-gradient(100deg, #fff 20%, var(--cyan) 55%, var(--blue) 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  body.light-mode .hero h1{
+    background: linear-gradient(100deg, #0B1020 20%, var(--blue) 70%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p{ color: var(--text-soft); max-width: 56ch; margin-top: 16px; font-size: 15.5px; }
+
+  /* ---------- bento grid ---------- */
+  .bento{
+    display:grid;
+    grid-template-columns: 1.3fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 18px;
+    padding-bottom: 60px;
+  }
+  @media (max-width: 900px){ .bento{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px){ .bento{ grid-template-columns: 1fr; } }
+
+  .box{
+    background: var(--glass);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+    border-radius: var(--radius);
+    padding: 22px;
+    text-align: left;
+    color: var(--text);
+    display:flex; flex-direction:column; justify-content:space-between;
+    min-height: 150px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+  }
+  .box::before{
+    content:""; position:absolute; inset:0; opacity:0;
+    background: radial-gradient(240px circle at var(--mx,50%) var(--my,0%), rgba(91,140,255,.15), transparent 60%);
+    transition: opacity .25s ease;
+    pointer-events:none;
+  }
+  .box:hover{
+    transform: translateY(-4px);
+    border-color: var(--border-hi);
+    background: var(--glass-2);
+    box-shadow: 0 10px 40px -12px var(--box-accent, var(--blue-glow));
+  }
+  .box:hover::before{ opacity:1; }
+  .box:focus-visible{ outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+  .box--tutor{ grid-row: span 2; --box-accent: var(--blue-glow); background: linear-gradient(160deg, var(--glass-2), var(--glass)); }
+  .box-icon{
+    width: 42px; height:42px; border-radius: 11px;
+    background: var(--icon-bg, rgba(59,130,246,.14)); color: var(--icon-color, var(--blue));
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom: 16px;
+    box-shadow: 0 0 20px -6px var(--icon-color, var(--blue));
+  }
+  .box-icon svg{ width:22px; height:22px; }
+  .box h3{ font-size: 18px; }
+  .box .desc{ font-size: 13.5px; color: var(--text-soft); margin-top: 6px; line-height: 1.5; }
+  .box .foot{ display:flex; align-items:center; justify-content:space-between; margin-top: 18px; position:relative; z-index:1; }
+  .box .badge{
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-soft);
+    border: 1px solid var(--border); padding: 4px 9px; border-radius: 999px;
+  }
+  .box .arrow{ font-size: 18px; color: var(--icon-color, var(--blue)); }
+
+  .box--tutor .desc{ max-width: 34ch; }
+  .box--tutor .mini-log{ margin-top: 18px; display:flex; flex-direction:column; gap:8px; position:relative; z-index:1; }
+  .mini-msg{ font-size: 12.5px; padding: 8px 10px; border-radius: 8px; max-width: 85%; }
+  .mini-msg.s{ align-self:flex-end; background: rgba(34,211,238,.12); color: var(--cyan); }
+  .mini-msg.t{ align-self:flex-start; background: rgba(255,255,255,.05); color: var(--text-soft); }
+
+  /* ---------- modal ---------- */
+  .overlay{
+    position: fixed; inset:0; background: rgba(2,4,12,.78);
+    backdrop-filter: blur(4px);
+    display:none; align-items:center; justify-content:center;
+    padding: 24px; z-index: 50;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background: rgba(9,13,32,.92); border: 1px solid var(--border); border-radius: 18px;
+    width: 100%; max-width: 560px; max-height: 82vh; overflow-y:auto;
+    padding: 26px;
+    box-shadow: 0 0 60px -10px rgba(59,130,246,.25);
+  }
+  body.light-mode .modal{ background: rgba(255,255,255,.96); }
+  .modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 18px; }
+  .modal-head h2{ font-size: 21px; }
+  .close-btn{
+    background: var(--glass); border: 1px solid var(--border); color: var(--text);
+    width: 32px; height:32px; border-radius: 8px; display:flex; align-items:center; justify-content:center;
+  }
+
+  /* list items (quiz/summary/lecture) */
+  .item-row{
+    display:flex; align-items:center; justify-content:space-between; gap: 12px;
+    padding: 13px 0; border-bottom: 1px solid var(--border);
+  }
+  .item-row:last-child{ border-bottom: none; }
+  .item-info h4{ font-family: var(--font-body); font-weight:600; font-size: 14.5px; margin:0; }
+  .item-info .tags{ display:flex; gap:8px; margin-top: 6px; }
+  .difficulty{
+    font-family: var(--font-mono); font-size: 10.5px; text-transform:uppercase;
+    padding: 2px 8px; border-radius: 5px;
+  }
+  .difficulty.easy{ background: rgba(34,211,238,.14); color: var(--cyan); }
+  .difficulty.medium{ background: rgba(59,130,246,.16); color: #8FB4FF; }
+  .difficulty.hard{ background: rgba(255,122,69,.14); color: var(--flame); }
+
+  .action-btn{
+    background: var(--blue); color: #fff; border:none; border-radius: 8px;
+    padding: 8px 14px; font-size: 12.5px; font-weight:600; white-space:nowrap;
+    box-shadow: 0 0 16px -4px var(--blue-glow);
+  }
+  .action-btn.done{ background: rgba(34,211,238,.14); color: var(--cyan); box-shadow:none; }
+  .action-btn:disabled{ cursor: default; }
+
+  /* quiz play (real, gradable quiz) */
+  .qp-card{
+    background: var(--glass); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .qp-question{ font-weight: 600; font-size: 14.5px; margin: 0 0 12px; }
+  .qp-option{
+    display:block; width:100%; text-align:left;
+    background: var(--glass-2); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 13.5px;
+  }
+  .qp-option:hover:not(:disabled){ border-color: var(--border-hi); }
+  .qp-option.selected{ border-color: var(--cyan); background: rgba(34,211,238,.12); }
+  .qp-option.correct-answer{ border-color: var(--cyan); background: rgba(34,211,238,.14); color: var(--cyan); }
+  .qp-option.wrong-answer{ border-color: var(--flame); background: rgba(255,122,69,.12); color: var(--flame); }
+  .qp-option:disabled{ cursor: default; }
+  .qp-explanation{ display:none; margin-top:12px; padding:12px 14px; background: rgba(3,5,15,.35); border-left: 3px solid var(--cyan); border-radius: 6px; font-size: 13px; color: var(--text-soft); line-height: 1.5; }
+  .qp-explanation strong{ color: var(--cyan); }
+  #quizPlaySubmit:disabled{ opacity: .45; cursor: not-allowed; }
+  #quizPlayRedo{
+    background: transparent; color: var(--cyan); border: 1px solid var(--cyan);
+    border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight:600;
+    margin-left: 10px;
+  }
+  #quizPlayResult{ min-height: 18px; }
+
+  /* track record */
+  .stat-grid{ display:grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
+  .stat-box{ background: var(--glass); border:1px solid var(--border); border-radius: 12px; padding: 14px; text-align:center; }
+  .stat-box b{ display:block; font-family: var(--font-mono); font-size: 20px; color: var(--gold); }
+  .stat-box span{ font-size: 11px; color: var(--text-soft); }
+
+  .topic-bar{ margin-bottom: 14px; }
+  .topic-bar .tb-head{ display:flex; justify-content:space-between; font-size: 13px; margin-bottom:6px; }
+  .topic-bar .tb-head span:last-child{ color: var(--text-soft); font-family: var(--font-mono); font-size: 11.5px; }
+  .tb-track{ height: 7px; border-radius: 4px; background: rgba(255,255,255,.06); overflow:hidden; }
+  .tb-fill{ height:100%; background: linear-gradient(90deg, var(--blue), var(--cyan)); box-shadow: 0 0 10px var(--blue-glow); }
+
+  /* tutor modal chat */
+  .chat-log{ display:flex; flex-direction:column; gap:10px; max-height: 320px; overflow-y:auto; padding-right:4px; margin-bottom: 14px; }
+  .chat-msg{ padding: 10px 13px; border-radius: 10px; font-size: 14px; max-width: 85%; }
+  .chat-msg.student{ align-self:flex-end; background: rgba(34,211,238,.12); color: var(--cyan); }
+  .chat-msg.tutor{ align-self:flex-start; background: var(--glass); border: 1px solid var(--border); color: var(--text); }
+  .chat-msg.tutor p{ margin: 0 0 8px; }
+  .chat-msg.tutor p:last-child{ margin-bottom: 0; }
+  .chat-msg.tutor ul, .chat-msg.tutor ol{ margin: 0 0 8px; padding-left: 20px; }
+  .chat-msg.tutor code{ background: rgba(255,255,255,.08); padding: 1px 5px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .chat-msg.tutor pre{ background: rgba(255,255,255,.06); padding: 10px; border-radius: 8px; overflow-x: auto; margin: 0 0 8px; }
+  .chat-msg.tutor pre code{ background: none; padding: 0; }
+  .chat-input-row{ display:flex; gap: 8px; }
+  .chat-input-row input{
+    flex:1; background: var(--glass); border: 1px solid var(--border); border-radius: 8px;
+    padding: 11px 13px; color: var(--text); font-family: var(--font-body); font-size: 14px;
+  }
+  .chat-input-row input:focus{ outline: 2px solid var(--blue); }
+  .chat-input-row button{
+    background: var(--blue); color:#fff; border:none; border-radius:8px; padding: 0 18px; font-weight:600;
+    box-shadow: 0 0 16px -4px var(--blue-glow);
+  }
+
+  /* tutor modal — bigger overall window + bigger chat contents.
+     overflow-y is set to visible here (overriding the base .modal
+     rule) because the modal itself should NOT scroll — only
+     .chat-log should. With both the modal and the chat-log
+     scrollable at once, a scrollIntoView() on a new message had two
+     nested scroll containers to satisfy and would fight itself,
+     which is what was landing the view at the bottom of a long
+     answer instead of its top. */
+  #tutorModal .modal{ max-width: min(96vw, 1400px); max-height: 88vh; padding: 32px; overflow-y: visible; display:flex; flex-direction:column; }
+  #tutorModal .chat-log{ max-height: 60vh; gap: 14px; }
+  #tutorModal .chat-msg{ font-size: 16px; padding: 13px 16px; max-width: 88%; }
+  #tutorModal .chat-msg.tutor code{ font-size: 14.5px; }
+  #tutorModal .chat-input-row input{ padding: 14px 16px; font-size: 15.5px; }
+  #tutorModal .chat-input-row button{ padding: 0 24px; font-size: 15px; }
+
+  /* ---------- profile modal ---------- */
+  .profile-view{ display:none; }
+  .profile-view.active{ display:block; }
+
+  /* menu view */
+  .profile-hero{ display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom: 22px; }
+  .avatar-edit{
+    position: relative; width: 76px; height:76px; border-radius:50%; cursor:pointer;
+    margin-bottom: 14px;
+  }
+  .profile-avatar{
+    width: 76px; height:76px; border-radius:50%;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    background-size: cover; background-position:center;
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-display); font-weight:700; font-size: 24px; color: #03050F;
+    box-shadow: 0 0 24px -4px var(--blue-glow);
+  }
+  .avatar-edit .pencil{
+    position:absolute; bottom:-2px; right:-2px;
+    width: 26px; height:26px; border-radius:50%;
+    background: var(--blue); border: 2px solid rgba(9,13,32,.92);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff;
+  }
+  .avatar-edit .pencil svg{ width:13px; height:13px; }
+  .avatar-edit input[type="file"]{ display:none; }
+
+  .profile-name{ font-size: 18px; font-weight:600; }
+  .profile-role{ font-size: 12.5px; color: var(--text-soft); font-family: var(--font-mono); margin-top: 4px; }
+
+  .profile-menu{ display:flex; flex-direction:column; gap: 6px; }
+  .menu-item{
+    display:flex; align-items:center; gap: 12px;
+    background: transparent; border: 1px solid transparent; border-radius: 10px;
+    padding: 12px 12px; text-align:left; color: var(--text); font-size: 14.5px; font-weight:500;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .menu-item:hover{ background: var(--glass); border-color: var(--border); }
+  .menu-item .m-icon{
+    width: 34px; height:34px; border-radius: 9px; flex-shrink:0;
+    background: rgba(59,130,246,.14); color: var(--blue);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .menu-item .m-icon svg{ width:17px; height:17px; }
+  .menu-item .m-label{ flex:1; }
+  .menu-item .m-chevron{ color: var(--text-soft); font-size: 15px; }
+
+  .toggle{
+    width: 40px; height: 22px; border-radius: 999px; background: rgba(255,255,255,.12);
+    position: relative; flex-shrink:0; border: 1px solid var(--border);
+    transition: background .2s ease;
+  }
+  .toggle::after{
+    content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+    background: #fff; transition: transform .2s ease;
+  }
+  .toggle.on{ background: var(--blue); }
+  .toggle.on::after{ transform: translateX(18px); }
+
+  /* edit / links view */
+  .back-row{ display:flex; align-items:center; gap:10px; margin-bottom: 4px; }
+  .back-btn{
+    background: var(--glass); border: 1px solid var(--border); color: var(--text);
+    width: 30px; height:30px; border-radius: 8px; display:flex; align-items:center; justify-content:center;
+  }
+  .section-label{
+    font-family: var(--font-mono); font-size: 11px; text-transform:uppercase; letter-spacing:.05em;
+    color: var(--text-soft); margin: 20px 0 10px;
+  }
+  .field{ margin-bottom: 14px; }
+  .field label{ display:block; font-size: 11.5px; color: var(--text-soft); font-family: var(--font-mono); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em; }
+  .field input{
+    width:100%; background: var(--glass); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; color: var(--text); font-family: var(--font-body); font-size: 14px;
+  }
+  .field input:focus{ outline: 2px solid var(--blue); }
+
+  .link-row{ display:flex; align-items:center; gap: 14px; flex-wrap: wrap; }
+
+  /* ----- icon button + "border travels around the ring" hover effect -----
+     Self-contained on purpose — delete this block (and swap
+     .icon-btn:hover styles back to a plain highlight) if the
+     moving-outline look doesn't end up working for you. */
+  .icon-btn{
+    position: relative;
+    width: 46px; height:46px; border-radius:50%;
+    background: var(--glass); border: 1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    color: var(--text); text-decoration:none;
+  }
+  .icon-btn svg{ width:19px; height:19px; position:relative; z-index:1; }
+  .icon-btn::before{
+    content:"";
+    position:absolute; inset:-2px; border-radius:50%; padding:2px;
+    background: conic-gradient(from 0deg, transparent 0deg, var(--cyan) 40deg, transparent 90deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity .2s ease;
+  }
+  .icon-btn:hover::before{ opacity:1; animation: ring-travel 1.3s linear infinite; }
+  @keyframes ring-travel{ to{ transform: rotate(360deg); } }
+  /* ----- end moving-outline effect ----- */
+
+  .icon-btn.add-btn{ border-style: dashed; color: var(--text-soft); }
+
+  footer{ padding: 30px 0 50px; text-align:center; color: var(--text-soft); font-size: 12.5px; position:relative; z-index:1; }
+</style>
+</head>
+<body>
+
+<canvas id="fx"></canvas>
+
+<!-- ===================== LOGIN SCREEN ===================== -->
+<div id="authScreen" style="display:none; max-width:420px; margin:100px auto; padding:0 20px; position:relative; z-index:2;">
+  <h1 style="font-family:var(--font-display); font-size:28px; margin-bottom:20px;">Log in to Quanta</h1>
+
+  <div id="auth-section">
+    <input id="email-input" type="email" placeholder="Email"
+      style="display:block; width:100%; box-sizing:border-box; background:var(--glass); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:8px; margin-bottom:10px; font-size:14px;" />
+    <input id="password-input" type="password" placeholder="Password"
+      style="display:block; width:100%; box-sizing:border-box; background:var(--glass); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:8px; margin-bottom:10px; font-size:14px;" />
+    <button id="signup-btn" style="border:none; padding:11px 18px; border-radius:8px; font-weight:600; cursor:pointer; font-size:14px; margin-right:8px; background:var(--glass-2); color:var(--text);">Sign Up</button>
+    <button id="login-btn" style="border:none; padding:11px 18px; border-radius:8px; font-weight:600; cursor:pointer; font-size:14px; background:var(--cyan); color:#03050F;">Log In</button>
+  </div>
+
+  <p id="auth-status" style="color:var(--text-soft); margin-top:14px; font-size:14px;"></p>
+</div>
+
+<!-- ===================== MAIN APP (hidden until logged in) ===================== -->
+<div id="appRoot" style="display:none;">
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="atom">
+        <svg viewBox="0 0 34 34" fill="none">
+          <circle cx="17" cy="17" r="3" fill="#22D3EE"/>
+          <g class="orbit">
+            <ellipse cx="17" cy="17" rx="15" ry="6" stroke="#3B82F6" stroke-width="1.4"/>
+            <circle cx="32" cy="17" r="2" fill="#3B82F6"/>
+          </g>
+          <g class="orbit o2" style="transform: rotate(60deg)">
+            <ellipse cx="17" cy="17" rx="15" ry="6" stroke="#22D3EE" stroke-width="1.4" transform="rotate(60 17 17)"/>
+            <circle cx="26.5" cy="4.5" r="2" fill="#22D3EE"/>
+          </g>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Quanta</div>
+        <span class="brand-tag">// quantum mechanics, one subject at a time</span>
+      </div>
+    </div>
+    <div class="top-right">
+      <button class="profile-btn" id="profileOpenBtn" aria-label="Open profile">UN</button>
+    </div>
+  </div>
+
+  <header class="hero">
+    <span class="eyebrow">// one subject, done properly</span>
+    <h1>Quantum Mechanics, taught by an AI tutor.</h1>
+    <p>Chat through the concepts, quiz yourself, revise from summaries, and track your learning progress.</p>
+  </header>
+
+  <main class="bento">
+    <button class="box box--tutor" data-modal="tutorModal">
+      <div>
+        <div class="box-icon" style="--icon-bg: rgba(59,130,246,.14); --icon-color: #5B9CFF;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </div>
+        <h3>AI Tutor</h3>
+        <div class="desc">Ask anything about quantum mechanics — superposition, entanglement, the maths, all of it.</div>
+        <div class="mini-log">
+          <div class="mini-msg s">why does observation collapse the wavefunction?</div>
+          <div class="mini-msg t">tutor is thinking…</div>
+        </div>
+      </div>
+      <div class="foot"><span class="badge">chat · always on</span><span class="arrow">→</span></div>
+    </button>
+
+    <button class="box" data-modal="quizModal">
+      <div>
+        <div class="box-icon" style="--icon-bg: rgba(34,211,238,.14); --icon-color: #22D3EE;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+        </div>
+        <h3>Quizzes</h3>
+        <div class="desc">Test yourself topic by topic.</div>
+      </div>
+      <div class="foot"><span class="badge" id="quizBadge">2/6 done</span><span class="arrow" style="color:var(--cyan)">→</span></div>
+    </button>
+
+    <button class="box" data-modal="summaryModal">
+      <div>
+        <div class="box-icon" style="--icon-bg: rgba(255,200,69,.12); --icon-color: #FFC845;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+        </div>
+        <h3>Summaries</h3>
+        <div class="desc">Quick chapter recaps to revise from before an exam.</div>
+      </div>
+      <div class="foot"><span class="badge" id="summaryBadge">3/5 done</span><span class="arrow" style="color:var(--gold)">→</span></div>
+    </button>
+
+    <button class="box" data-modal="trackModal">
+      <div>
+        <div class="box-icon" style="--icon-bg: rgba(255,122,69,.12); --icon-color: #FF7A45;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+        </div>
+        <h3>Track Record</h3>
+        <div class="desc">Your overall progress across every topic.</div>
+      </div>
+      <div class="foot"><span class="badge">updated live</span><span class="arrow" style="color:var(--flame)">→</span></div>
+    </button>
+
+    <button class="box" data-modal="lectureModal">
+      <div>
+        <div class="box-icon" style="--icon-bg: rgba(59,130,246,.14); --icon-color: #5B9CFF;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="M21 8l-4 3 4 3z"/></svg>
+        </div>
+        <h3>AI Lectures</h3>
+        <div class="desc">Short animated walkthroughs of the hardest ideas.</div>
+      </div>
+      <div class="foot"><span class="badge" id="lectureBadge">1/4 done</span><span class="arrow">→</span></div>
+    </button>
+  </main>
+
+  <footer>Front end &amp; back end are being built separately — this is the design + interaction reference. Swap in real content and wire the tutor, quizzes, and lectures to the actual services.</footer>
+</div>
+
+<!-- ---------- Tutor Modal ---------- -->
+<div class="overlay" id="tutorModal">
+  <div class="modal">
+    <div class="modal-head"><h2>AI Tutor · Quantum Mechanics</h2><button class="close-btn" data-close>✕</button></div>
+    <div class="chat-log" id="chatLog">
+      <div class="chat-msg tutor">Hey! Ask me anything about quantum mechanics — I'll do my best to explain it simply.</div>
+    </div>
+    <div class="chat-input-row">
+      <input id="chatInput" type="text" placeholder="e.g. what is superposition?" />
+      <button id="chatSend">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- Quiz Modal ---------- -->
+<div class="overlay" id="quizModal">
+  <div class="modal">
+    <div class="modal-head"><h2>Quizzes</h2><button class="close-btn" data-close>✕</button></div>
+    <div id="quizList"></div>
+  </div>
+</div>
+
+<!-- ---------- Quiz Play Modal (real, gradable quiz) ---------- -->
+<div class="overlay" id="quizPlayModal">
+  <div class="modal">
+    <div class="modal-head"><h2 id="quizPlayTitle">Quiz</h2><button class="close-btn" data-close>✕</button></div>
+    <div id="quizPlayContainer"></div>
+    <button class="action-btn" id="quizPlaySubmit" style="margin-top:6px;">Submit Quiz</button>
+    <button id="quizPlayRedo" style="display:none;">Redo Quiz</button>
+    <p id="quizPlayResult" style="margin-top:14px; font-size:13.5px; color:var(--text-soft);"></p>
+  </div>
+</div>
+
+<!-- ---------- Summary Modal ---------- -->
+<div class="overlay" id="summaryModal">
+  <div class="modal">
+    <div class="modal-head"><h2>Summaries</h2><button class="close-btn" data-close>✕</button></div>
+    <div id="summaryList"></div>
+  </div>
+</div>
+
+<!-- ---------- Track Record Modal ---------- -->
+<div class="overlay" id="trackModal">
+  <div class="modal">
+    <div class="modal-head"><h2>Track Record</h2><button class="close-btn" data-close>✕</button></div>
+    <div class="stat-grid">
+      <div class="stat-box"><b id="trCompleted">6</b><span>items completed</span></div>
+    </div>
+    <div id="topicBars"></div>
+  </div>
+</div>
+
+<!-- ---------- Lecture Modal ---------- -->
+<div class="overlay" id="lectureModal">
+  <div class="modal">
+    <div class="modal-head"><h2>AI Lectures</h2><button class="close-btn" data-close>✕</button></div>
+    <div id="lectureList"></div>
+  </div>
+</div>
+
+<!-- ---------- Profile Modal ---------- -->
+<div class="overlay" id="profileModal">
+  <div class="modal">
+    <div class="modal-head"><h2 id="profileModalTitle">Profile</h2><button class="close-btn" data-close>✕</button></div>
+
+    <!-- menu view (default) -->
+    <div class="profile-view active" id="profileView-menu">
+      <div class="profile-hero">
+        <label class="avatar-edit" title="Change profile picture">
+          <div class="profile-avatar" id="profileAvatar">UN</div>
+          <span class="pencil">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </span>
+          <input type="file" id="avatarInput" accept="image/*">
+        </label>
+        <div class="profile-name" id="profileNameDisplay">User Name</div>
+        <div class="profile-role" id="profileStudyingDisplay">B.Tech CSE (Cyber Security), SRM KTR</div>
+      </div>
+
+      <div class="profile-menu">
+        <button class="menu-item" data-view="edit">
+          <span class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></svg></span>
+          <span class="m-label">Profile</span>
+          <span class="m-chevron">›</span>
+        </button>
+        <button class="menu-item" data-view="settings">
+          <span class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+          <span class="m-label">Settings</span>
+          <span class="m-chevron">›</span>
+        </button>
+        <button class="menu-item" id="darkModeToggleRow">
+          <span class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span>
+          <span class="m-label">Dark Mode</span>
+          <span class="toggle on" id="darkModeToggle"></span>
+        </button>
+        <button class="menu-item" id="logoutBtn">
+          <span class="m-icon" style="background: rgba(255,122,69,.14); color: var(--flame);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></span>
+          <span class="m-label">Log Out</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- edit / links view -->
+    <div class="profile-view" id="profileView-edit">
+      <div class="back-row">
+        <button class="back-btn" data-back>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+      <div class="field"><label>Name</label><input type="text" id="nameInput" value="User Name"></div>
+      <div class="field"><label>Studying</label><input type="text" id="studyingInput" value="B.Tech CSE (Cyber Security), SRM KTR"></div>
+
+      <div class="section-label">Links</div>
+      <div class="link-row" id="linkRow">
+        <a class="icon-btn" href="#" target="_blank" rel="noopener" title="LinkedIn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
+        </a>
+        <button class="icon-btn add-btn" id="addLinkBtn" title="Add a link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- settings view -->
+    <div class="profile-view" id="profileView-settings">
+      <div class="back-row">
+        <button class="back-btn" data-back>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+      <p style="color:var(--text-soft); font-size:14px;">More settings are coming soon — this panel is a placeholder for whatever your backend ends up exposing (notifications, account, etc.).</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ---------------------------------------------------------------
+  // Background particle field — quantum-probability-cloud vibe.
+  // Purely decorative; safe to delete if your teammates' build
+  // doesn't want it.
+  // ---------------------------------------------------------------
+  (function(){
+    const canvas = document.getElementById('fx');
+    const ctx = canvas.getContext('2d');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let w, h, particles;
+
+    function resize(){
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    function initParticles(){
+      const count = Math.min(70, Math.floor((w*h)/22000));
+      particles = Array.from({length: count}, () => ({
+        x: Math.random()*w,
+        y: Math.random()*h,
+        r: Math.random()*1.6 + 0.4,
+        vx: (Math.random()-0.5)*0.15,
+        vy: (Math.random()-0.5)*0.15,
+        hue: Math.random() > 0.5 ? '59,130,246' : '34,211,238',
+        a: Math.random()*0.5 + 0.15
+      }));
+    }
+    function draw(){
+      ctx.clearRect(0,0,w,h);
+      particles.forEach(p => {
+        if(!reduceMotion){
+          p.x += p.vx; p.y += p.vy;
+          if(p.x < 0) p.x = w; if(p.x > w) p.x = 0;
+          if(p.y < 0) p.y = h; if(p.y > h) p.y = 0;
+        }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${p.hue},${p.a})`;
+        ctx.fill();
+      });
+      if(!reduceMotion) requestAnimationFrame(draw);
+    }
+    resize();
+    initParticles();
+    draw();
+    window.addEventListener('resize', () => { resize(); initParticles(); if(reduceMotion) draw(); });
+  })();
+
+  // ---------------------------------------------------------------
+  // Cursor-follow glow on box hover
+  // ---------------------------------------------------------------
+  document.querySelectorAll('.box').forEach(box => {
+    box.addEventListener('mousemove', e => {
+      const rect = box.getBoundingClientRect();
+      box.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+      box.style.setProperty('--my', `${e.clientY - rect.top}px`);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // App state — in-memory demo data so the interactions are visible.
+  // Front end + back end are being built separately; treat this as
+  // the design/interaction reference, not the production code.
+  // ---------------------------------------------------------------
+  const state = {
+    quizzes: [
+      {
+        title: "Superposition", difficulty: "easy", done: false,
+        questions: [
+          { question: "What is quantum superposition?", options: ["A qubit being destroyed", "A qubit existing in a combination of quantum states", "A qubit becoming permanently 0", "Two computers running simultaneously"], correctIndex: 1, explanation: "Superposition allows a quantum state to be a combination of basis states." },
+          { question: "What happens when a qubit in superposition is measured?", options: ["Both states are observed simultaneously", "One definite outcome is obtained", "The qubit disappears", "It always becomes 0"], correctIndex: 1, explanation: "Measurement gives a single definite result." },
+          { question: "Which gate can create an equal superposition from |0⟩?", options: ["X gate", "Z gate", "Hadamard gate", "CNOT gate"], correctIndex: 2, explanation: "The Hadamard gate transforms |0⟩ into an equal superposition." },
+          { question: "An equal superposition of |0⟩ and |1⟩ has what measurement probabilities?", options: ["100% and 0%", "75% and 25%", "50% and 50%", "25% and 75%"], correctIndex: 2, explanation: "An equal superposition gives a 50% probability for each outcome." },
+          { question: "Which statement about superposition is correct?", options: ["It means we directly observe both 0 and 1", "It describes a quantum state before measurement", "It exists only after measurement", "It is the same thing as classical randomness"], correctIndex: 1, explanation: "Superposition describes the quantum state before measurement, not two classical values being directly observed." }
+        ]
+      },
+      {
+        title: "Qubits", difficulty: "easy", done: false,
+        questions: [
+          { question: "What is a qubit?", options: ["A unit of classical memory", "The basic unit of quantum information", "A quantum computer", "A type of quantum gate"], correctIndex: 1, explanation: "A qubit, or quantum bit, is the basic unit of quantum information." },
+          { question: "What are the two computational basis states of a qubit?", options: ["0 and 1", "1 and 2", "+ and −", "True and False"], correctIndex: 0, explanation: "The computational basis states are |0⟩ and |1⟩." },
+          { question: "What is a major difference between a classical bit and a qubit?", options: ["A qubit can only be 0", "A qubit can only be 1", "A qubit can exist in a combination of basis states", "A qubit cannot be measured"], correctIndex: 2, explanation: "A qubit can exist in a quantum combination of its basis states." },
+          { question: "Which notation represents the state of a qubit?", options: ["|q⟩", "{q}", "[q]", "<q>"], correctIndex: 0, explanation: "Quantum states are commonly represented using Dirac, or ket, notation such as |q⟩." },
+          { question: "What happens when a qubit is measured?", options: ["It always becomes 0", "It always becomes 1", "A definite outcome is obtained", "It becomes a classical computer"], correctIndex: 2, explanation: "Measurement produces a definite classical result." }
+        ]
+      },
+      {
+        title: "Quantum States", difficulty: "medium", done: false,
+        questions: [
+          { question: "What does a quantum state describe?", options: ["The physical size of a quantum computer", "The state or condition of a quantum system", "The speed of a quantum computer", "The number of gates in a circuit"], correctIndex: 1, explanation: "A quantum state contains the information needed to describe the state of a quantum system." },
+          { question: "Which expression represents a general single-qubit state?", options: ["|ψ⟩ = α|0⟩ + β|1⟩", "ψ = 0 + 1", "|ψ⟩ = α + β", "ψ = αβ"], correctIndex: 0, explanation: "A general single-qubit state can be written as |ψ⟩ = α|0⟩ + β|1⟩." },
+          { question: "In |ψ⟩ = α|0⟩ + β|1⟩, what do α and β represent?", options: ["Qubits", "Quantum gates", "Probability amplitudes", "Measurements"], correctIndex: 2, explanation: "α and β are probability amplitudes. Their squared magnitudes determine measurement probabilities." },
+          { question: "What must the probabilities of measuring 0 and 1 add up to?", options: ["0", "0.5", "1", "2"], correctIndex: 2, explanation: "The probabilities of all possible measurement outcomes must sum to 1." },
+          { question: "Which of these is a valid single-qubit basis state?", options: ["|0⟩", "|2⟩", "|3⟩", "|10⟩"], correctIndex: 0, explanation: "|0⟩ and |1⟩ are the two computational basis states of a single qubit." }
+        ]
+      },
+      {
+        title: "Quantum Gates", difficulty: "medium", done: false,
+        questions: [
+          { question: "What is the purpose of a quantum gate?", options: ["To manipulate quantum states", "To measure temperature", "To store classical files", "To connect computers to the internet"], correctIndex: 0, explanation: "Quantum gates perform operations that change the state of one or more qubits." },
+          { question: "What does the X gate do to |0⟩?", options: ["Leaves it unchanged", "Changes it to |1⟩", "Measures it", "Creates two qubits"], correctIndex: 1, explanation: "The X gate acts like a quantum NOT operation: X|0⟩ = |1⟩." },
+          { question: "Which gate is commonly used to create an equal superposition from |0⟩?", options: ["X", "Z", "Hadamard (H)", "CNOT"], correctIndex: 2, explanation: "The Hadamard gate creates an equal superposition when applied to |0⟩." },
+          { question: "What does the Z gate do to |0⟩?", options: ["Changes it to |1⟩", "Leaves |0⟩ unchanged", "Measures it", "Creates a superposition"], correctIndex: 1, explanation: "Z|0⟩ = |0⟩, while the Z gate changes the phase of |1⟩." },
+          { question: "Which gate is commonly used to create interactions between two qubits?", options: ["H", "X", "Z", "CNOT"], correctIndex: 3, explanation: "CNOT is a two-qubit gate that can create correlations and, with suitable inputs, entanglement." }
+        ]
+      },
+      {
+        title: "Measurement", difficulty: "medium", done: false,
+        questions: [
+          { question: "What is the purpose of measuring a qubit?", options: ["To obtain a classical result", "To create another qubit", "To add a quantum gate", "To increase its energy"], correctIndex: 0, explanation: "Measurement converts quantum information into a classical observable result." },
+          { question: "What are the possible measurement results of a single qubit in the computational basis?", options: ["0 or 1", "1 or 2", "+ or − only", "Any number"], correctIndex: 0, explanation: "A single qubit measured in the computational basis produces 0 or 1." },
+          { question: "A qubit has a 70% probability of measuring 0. What is the probability of measuring 1?", options: ["10%", "20%", "30%", "70%"], correctIndex: 2, explanation: "The probabilities must add to 100%, so 100% − 70% = 30%." },
+          { question: "What generally happens to a superposition when the qubit is measured?", options: ["It remains unchanged", "A definite outcome is obtained", "It becomes a second superposition", "It turns into two qubits"], correctIndex: 1, explanation: "Measurement produces a definite outcome rather than leaving the qubit in the original superposition." },
+          { question: "If a qubit is already in the state |0⟩ and is measured in the computational basis, what result will be obtained?", options: ["Always 0", "Always 1", "50% 0 and 50% 1", "It cannot be measured"], correctIndex: 0, explanation: "A qubit already in |0⟩ gives 0 with certainty when measured in the computational basis." }
+        ]
+      },
+    ],
+    summaries: [
+      { title: "Wave-Particle Duality — recap", difficulty: "easy", done: true },
+      { title: "Schrödinger Equation — recap", difficulty: "medium", done: true },
+      { title: "Superposition — recap", difficulty: "easy", done: true },
+      { title: "Entanglement — recap", difficulty: "medium", done: false },
+      { title: "Uncertainty Principle — recap", difficulty: "hard", done: false },
+    ],
+    lectures: [
+      { title: "Intro to Quantum States", difficulty: "easy", done: true },
+      { title: "Visualizing Superposition", difficulty: "medium", done: false },
+      { title: "Entanglement, Explained Visually", difficulty: "medium", done: false },
+      { title: "Inside the Uncertainty Principle", difficulty: "hard", done: false },
+    ],
+    topics: [
+      { name: "Wave-Particle Duality", progress: 90 },
+      { name: "Schrödinger Equation", progress: 65 },
+      { name: "Superposition", progress: 40 },
+      { name: "Entanglement", progress: 20 },
+      { name: "Uncertainty Principle", progress: 10 },
+    ]
+  };
+
+  // Named supabaseClient (not "supabase") to avoid colliding with the
+  // library's own global name.
+  const supabaseClient = window.supabase.createClient(
+    "https://vmtestykmprdknoiilse.supabase.co",
+    "sb_publishable_rxspuE96r68kIW0lWWITPg_PcONREqK"
+  );
+
+  // ---------------------------------------------------------------
+  // Auth — inline login screen (was a separate login.html before).
+  // Shows #authScreen until a Supabase session exists, then reveals
+  // #appRoot and initializes the app.
+  // ---------------------------------------------------------------
+  let currentUser = null;
+
+  const authScreen = document.getElementById("authScreen");
+  const appRoot = document.getElementById("appRoot");
+  const authStatus = document.getElementById("auth-status");
+
+  function showAuthScreen() {
+    authScreen.style.display = "block";
+    appRoot.style.display = "none";
+  }
+
+  async function showApp(user) {
+    currentUser = user;
+    authScreen.style.display = "none";
+    appRoot.style.display = "block";
+    await initApp();
+  }
+
+  document.getElementById("signup-btn").addEventListener("click", async () => {
+    const { error } = await supabaseClient.auth.signUp({
+      email: document.getElementById("email-input").value,
+      password: document.getElementById("password-input").value,
+    });
+    authStatus.textContent = error
+      ? error.message
+      : "Account created — check your email to confirm, or just log in below.";
+  });
+
+  document.getElementById("login-btn").addEventListener("click", async () => {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: document.getElementById("email-input").value,
+      password: document.getElementById("password-input").value,
+    });
+    if (error) {
+      authStatus.textContent = error.message;
+    } else {
+      showApp(data.user);
+      logAuthEvent('login');
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Learner Model API — change LEARNER_API_URL once you deploy it.
+  // Uses the real Supabase user id so mastery/history is tied to the
+  // actual logged-in account instead of a random per-browser guest id.
+  // ---------------------------------------------------------------
+  const LEARNER_API_URL = "http://localhost:5000";
+  function getUserId() {
+    return currentUser ? currentUser.id : "guest";
+  }
+
+  function diffLabel(d){ return d.charAt(0).toUpperCase() + d.slice(1); }
+
+  function renderBadges(){
+    document.getElementById('quizBadge').textContent =
+      `${state.quizzes.filter(q=>q.done).length}/${state.quizzes.length} done`;
+    document.getElementById('summaryBadge').textContent =
+      `${state.summaries.filter(s=>s.done).length}/${state.summaries.length} done`;
+    document.getElementById('lectureBadge').textContent =
+      `${state.lectures.filter(l=>l.done).length}/${state.lectures.length} done`;
+  }
+
+  // ---------------------------------------------------------------
+  // Per-user progress — persists "done" status for quizzes, summaries
+  // and lectures to Supabase so it survives logout/refresh. Uses a
+  // separate USER_PROGRESS table (quiz scores/history stay in
+  // QUIZ_SCORES as before — this table only tracks done/not-done).
+  // ---------------------------------------------------------------
+  // ---------------------------------------------------------------
+  // Login/logout activity log — same pattern as PROFILES and
+  // USER_PROGRESS above: one shared table (LOGIN_EVENTS), each row
+  // tagged with User (currentUser.id) and what happened, when.
+  // ---------------------------------------------------------------
+  async function logAuthEvent(eventType){
+    try {
+      // Look up their profile name directly rather than trusting
+      // whatever's currently on screen — on login, the profile hasn't
+      // necessarily finished loading into the page yet at this point.
+      const { data: profile } = await supabaseClient
+        .from('PROFILES')
+        .select('name')
+        .eq('User', currentUser.id)
+        .maybeSingle();
+
+      await supabaseClient.from('LOGIN_EVENTS').insert(
+        [{
+          User: currentUser.id,
+          email: currentUser.email,
+          username: (profile && profile.name) ? profile.name : null,
+          event_type: eventType,
+          created_at: new Date().toISOString()
+        }]
+      );
+    } catch(e){
+      console.error('Could not log auth event:', e);
+    }
+  }
+
+  async function saveProgress(itemType, itemTitle){
+    try {
+      await supabaseClient.from('USER_PROGRESS').upsert(
+        [{ User: currentUser.id, item_type: itemType, item_title: itemTitle, done: true, updated_at: new Date().toISOString() }],
+        { onConflict: 'User,item_type,item_title' }
+      );
+    } catch(e){
+      console.error('Could not save progress:', e);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Profile (Name + Studying/branch) — one row per user in PROFILES,
+  // upserted on edit so the next edit just overwrites the same row.
+  // ---------------------------------------------------------------
+  async function saveProfileField(field, value){
+    try {
+      await supabaseClient.from('PROFILES').upsert(
+        [{ User: currentUser.id, [field]: value, updated_at: new Date().toISOString() }],
+        { onConflict: 'User' }
+      );
+    } catch(e){
+      console.error('Could not save profile:', e);
+    }
+  }
+
+  async function loadProfile(){
+    try {
+      const { data } = await supabaseClient
+        .from('PROFILES')
+        .select('name, studying')
+        .eq('User', currentUser.id)
+        .maybeSingle();
+
+      if (data) {
+        if (data.name) {
+          document.getElementById('nameInput').value = data.name;
+          document.getElementById('profileNameDisplay').textContent = data.name;
+        }
+        if (data.studying) {
+          document.getElementById('studyingInput').value = data.studying;
+          document.getElementById('profileStudyingDisplay').textContent = data.studying;
+        }
+      }
+    } catch(e){
+      console.error('Could not load profile:', e);
+    }
+  }
+
+  async function loadUserProgress(){
+    try {
+      const { data: progress } = await supabaseClient
+        .from('USER_PROGRESS')
+        .select('item_type, item_title, done')
+        .eq('User', currentUser.id);
+
+      if (progress) {
+        progress.forEach(p => {
+          const list = p.item_type === 'quiz' ? state.quizzes
+                     : p.item_type === 'summary' ? state.summaries
+                     : p.item_type === 'lecture' ? state.lectures : null;
+          const item = list && list.find(i => i.title === p.item_title);
+          if (item) item.done = p.done;
+        });
+      }
+
+      // Also pull back each quiz's most recent score, so "Previous
+      // attempt: X/Y" shows correctly right after logging back in.
+      const { data: scores } = await supabaseClient
+        .from('QUIZ_SCORES')
+        .select('Topic, Score, created_at')
+        .eq('User', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      if (scores) {
+        state.quizzes.forEach(q => {
+          const latest = scores.find(s => s.Topic === q.title);
+          if (latest) q.lastScore = latest.Score;
+        });
+      }
+    } catch(e){
+      console.error('Could not load saved progress:', e);
+    }
+  }
+
+  function renderList(containerId, items, verb){
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    items.forEach((item, i) => {
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `
+        <div class="item-info">
+          <h4>${item.title}</h4>
+          <div class="tags">
+            <span class="difficulty ${item.difficulty}">${diffLabel(item.difficulty)}</span>
+          </div>
+        </div>
+        <button class="action-btn ${item.done && !item.questions ? 'done' : ''}" ${item.done && !item.questions ? 'disabled' : ''} data-index="${i}">
+          ${item.questions ? (item.done ? 'Retake Quiz' : verb) : (item.done ? '✓ Done' : verb)}
+        </button>
+      `;
+      el.appendChild(row);
+    });
+    el.querySelectorAll('button[data-index]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = +btn.dataset.index;
+        const item = items[idx];
+
+        // Items with a real question bank (e.g. the Qubits quiz) open the
+        // gradable quiz view instead of completing instantly — and stay
+        // clickable afterwards so the quiz can be retaken.
+        if(item.questions){
+          openQuizPlay(item, containerId, items, verb);
+          return;
+        }
+
+        if(item.done) return;
+
+        item.done = true;
+        saveProgress(containerId === 'summaryList' ? 'summary' : 'lecture', item.title);
+        renderBadges();
+        renderTrackRecord();
+        renderList(containerId, items, verb);
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Quiz Play — renders a real, gradable quiz (from quiz_3.html)
+  // inside its own modal on top of the quiz list, grades it, saves
+  // the score to Supabase, then marks the quiz item done like every
+  // other list item. Supports redoing the quiz — item.lastScore
+  // remembers the previous attempt's score for as long as the page
+  // stays loaded (no database read-back needed), and each redo shows
+  // a before/after comparison.
+  // ---------------------------------------------------------------
+  function openQuizPlay(item, containerId, items, verb){
+    const questions = item.questions;
+    let userAnswers = new Array(questions.length).fill(null);
+    let optionButtons = questions.map(() => []);
+
+    document.getElementById('quizPlayTitle').textContent = item.title;
+    const qContainer = document.getElementById('quizPlayContainer');
+    const resultEl = document.getElementById('quizPlayResult');
+    const submitBtn = document.getElementById('quizPlaySubmit');
+    const redoBtn = document.getElementById('quizPlayRedo');
+
+    function buildQuestions(){
+      qContainer.innerHTML = '';
+      userAnswers = new Array(questions.length).fill(null);
+      optionButtons = questions.map(() => []);
+
+      questions.forEach((q, qIndex) => {
+        const card = document.createElement('div');
+        card.className = 'qp-card';
+
+        const qText = document.createElement('p');
+        qText.className = 'qp-question';
+        qText.textContent = q.question;
+        card.appendChild(qText);
+
+        q.options.forEach((optionText, optIndex) => {
+          const obtn = document.createElement('button');
+          obtn.className = 'qp-option';
+          obtn.textContent = optionText;
+
+          obtn.addEventListener('click', () => {
+            userAnswers[qIndex] = optIndex;
+            card.querySelectorAll('.qp-option').forEach(o => o.classList.remove('selected'));
+            obtn.classList.add('selected');
+          });
+
+          card.appendChild(obtn);
+          optionButtons[qIndex].push(obtn);
+        });
+
+        if(q.explanation){
+          const explanation = document.createElement('div');
+          explanation.className = 'qp-explanation';
+          explanation.innerHTML = `<strong>Correct answer:</strong> ${q.options[q.correctIndex]}<br>${q.explanation}`;
+          card.appendChild(explanation);
+        }
+
+        qContainer.appendChild(card);
+      });
+    }
+
+    buildQuestions();
+    resultEl.textContent = '';
+    submitBtn.disabled = false;
+    submitBtn.style.display = '';
+    redoBtn.style.display = 'none';
+
+    submitBtn.onclick = async () => {
+      if(userAnswers.includes(null)){
+        resultEl.textContent = 'Answer every question first.';
+        return;
+      }
+
+      let score = 0;
+      questions.forEach((q, i) => { if(userAnswers[i] === q.correctIndex) score++; });
+
+      questions.forEach((q, qIndex) => {
+        optionButtons[qIndex].forEach((obtn, optIndex) => {
+          obtn.disabled = true;
+          obtn.classList.remove('selected');
+          if(optIndex === q.correctIndex){
+            obtn.classList.add('correct-answer');
+          } else if(optIndex === userAnswers[qIndex]){
+            obtn.classList.add('wrong-answer');
+          }
+        });
+        const explanationEl = qContainer.children[qIndex].querySelector('.qp-explanation');
+        if(explanationEl) explanationEl.style.display = 'block';
+      });
+
+      const scoreLine = item.lastScore == null
+        ? `You scored ${score} out of ${questions.length}.`
+        : `Previous attempt: ${item.lastScore}/${questions.length} → This attempt: ${score}/${questions.length}.`;
+
+      // Update everything the learner is looking at right away — the
+      // grading, the score line, the redo button, badges and track
+      // record don't depend on the DB write completing, so none of
+      // them should wait on it. Only the small "Saved" confirmation
+      // trails behind, and even that no longer blocks submitBtn.
+      resultEl.textContent = `${scoreLine} Saving...`;
+      submitBtn.disabled = true;
+      item.lastScore = score;
+      redoBtn.style.display = 'inline-block';
+      saveProgress('quiz', item.title);
+
+      if(!item.done){
+        item.done = true;
+        renderBadges();
+        renderTrackRecord();
+        renderList(containerId, items, verb);
+      }
+
+      // Fire the QUIZ_SCORES insert in the background instead of
+      // awaiting it — this was the ~5s lag: the whole UI above used
+      // to sit blocked on this one round-trip before updating.
+      (async () => {
+        let savedLine = scoreLine;
+        try {
+          const { error } = await supabaseClient
+            .from('QUIZ_SCORES')
+            .insert([{ Topic: item.title, Score: score, User: currentUser.id }]);
+
+          savedLine = error ? `${scoreLine} (saving failed: ${error.message})` : `${scoreLine} Saved!`;
+        } catch(e){
+          savedLine = `${scoreLine} (saving failed.)`;
+        }
+        // Only overwrite resultEl if the learner model recommendation
+        // below hasn't already replaced it with a fuller message.
+        if (resultEl.textContent === `${scoreLine} Saving...`) {
+          resultEl.textContent = savedLine;
+        }
+        window.__lastSavedLine = savedLine;
+      })();
+
+      // Learner Model API — send the full per-question answers so it can
+      // compute mastery and decide what the learner should do next.
+      // item.title matches the CSV/dataset topic names exactly. This
+      // runs after the score is already shown as saved, and only adds
+      // a recommendation on screen once/if it comes back — it never
+      // blocks or delays the "Saved!" message above.
+      (async () => {
+        try {
+          const answersByQuestionText = {};
+          questions.forEach((q, i) => {
+            answersByQuestionText[q.question] = ['A', 'B', 'C', 'D'][userAnswers[i]];
+          });
+
+          const apiResponse = await fetch(`${LEARNER_API_URL}/submit_quiz`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: getUserId(),
+              topic: item.title,
+              answers: answersByQuestionText,
+            }),
+          });
+          const result = await apiResponse.json();
+          if(result.recommendation){
+            const savedLine = window.__lastSavedLine || `${scoreLine} Saving...`;
+            resultEl.textContent = `${savedLine} Next: ${result.recommendation.reason}`;
+          }
+        } catch(apiError){
+          console.warn('Learner model API unreachable:', apiError);
+        }
+      })();
+    };
+
+    redoBtn.onclick = () => {
+      buildQuestions();
+      qContainer.querySelectorAll('.qp-explanation').forEach(el => el.style.display = 'none');
+      submitBtn.disabled = false;
+      redoBtn.style.display = 'none';
+      resultEl.textContent = `Previous attempt: ${item.lastScore}/${questions.length}. Answer again!`;
+    };
+
+    document.getElementById('quizPlayModal').classList.add('open');
+  }
+
+  function renderTrackRecord(){
+    const completed = state.quizzes.filter(q=>q.done).length
+      + state.summaries.filter(s=>s.done).length
+      + state.lectures.filter(l=>l.done).length;
+    document.getElementById('trCompleted').textContent = completed;
+
+    const bars = document.getElementById('topicBars');
+    bars.innerHTML = '';
+    state.topics.forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'topic-bar';
+      div.innerHTML = `
+        <div class="tb-head"><span>${t.name}</span><span>${t.progress}%</span></div>
+        <div class="tb-track"><div class="tb-fill" style="width:${t.progress}%"></div></div>
+      `;
+      bars.appendChild(div);
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Modal open/close
+  // ---------------------------------------------------------------
+  document.querySelectorAll('[data-modal]').forEach(trigger => {
+    trigger.addEventListener('click', () => {
+      document.getElementById(trigger.dataset.modal).classList.add('open');
+    });
+  });
+  document.getElementById('profileOpenBtn').addEventListener('click', () => {
+    document.getElementById('profileModal').classList.add('open');
+    showProfileView('menu');
+  });
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => btn.closest('.overlay').classList.remove('open'));
+  });
+  document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if(e.target === ov) ov.classList.remove('open'); });
+  });
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(ov => ov.classList.remove('open'));
+  });
+
+  // ---------------------------------------------------------------
+  // Profile modal — menu / edit / settings sub-views
+  // ---------------------------------------------------------------
+  const profileTitles = { menu: 'Profile', edit: 'Edit Profile', settings: 'Settings' };
+  function showProfileView(view){
+    document.querySelectorAll('.profile-view').forEach(v => v.classList.remove('active'));
+    document.getElementById(`profileView-${view}`).classList.add('active');
+    document.getElementById('profileModalTitle').textContent = profileTitles[view];
+  }
+  document.querySelectorAll('.menu-item[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => showProfileView(btn.dataset.view));
+  });
+  document.querySelectorAll('[data-back]').forEach(btn => {
+    btn.addEventListener('click', () => showProfileView('menu'));
+  });
+
+  // keep name/studying text in sync with the edit fields as you type,
+  // and save to Supabase once you finish editing (on blur/change) so
+  // the next login shows the latest edit instead of the old default.
+  document.getElementById('nameInput').addEventListener('input', e => {
+    document.getElementById('profileNameDisplay').textContent = e.target.value || 'User Name';
+  });
+  document.getElementById('nameInput').addEventListener('change', e => {
+    saveProfileField('name', e.target.value);
+  });
+  document.getElementById('studyingInput').addEventListener('input', e => {
+    document.getElementById('profileStudyingDisplay').textContent = e.target.value;
+  });
+  document.getElementById('studyingInput').addEventListener('change', e => {
+    saveProfileField('studying', e.target.value);
+  });
+
+  // dark mode toggle
+  const darkToggle = document.getElementById('darkModeToggle');
+  document.getElementById('darkModeToggleRow').addEventListener('click', e => {
+    if(e.target.closest('.toggle') === null && e.currentTarget !== e.target) {
+      // still allow clicking anywhere on the row, fall through
+    }
+    const isOn = darkToggle.classList.toggle('on');
+    document.body.classList.toggle('light-mode', !isOn);
+  });
+
+  // log out — real Supabase sign-out, back to the inline login screen
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await logAuthEvent('logout'); // log while currentUser is still set
+    await supabaseClient.auth.signOut();
+    currentUser = null;
+    document.getElementById('profileModal').classList.remove('open');
+    showAuthScreen();
+  });
+
+  // editable avatar
+  const avatarInput = document.getElementById('avatarInput');
+  const profileAvatar = document.getElementById('profileAvatar');
+  const profileOpenBtn = document.getElementById('profileOpenBtn');
+  avatarInput.addEventListener('change', () => {
+    const file = avatarInput.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const url = `url(${e.target.result})`;
+      profileAvatar.style.backgroundImage = url;
+      profileAvatar.textContent = '';
+      profileOpenBtn.style.backgroundImage = url;
+      profileOpenBtn.textContent = '';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // add-a-link button (Discord-style "add connection")
+  document.getElementById('addLinkBtn').addEventListener('click', () => {
+    const url = prompt('Paste a profile URL (GitHub, X, Discord, portfolio, etc.):');
+    if(!url) return;
+    const a = document.createElement('a');
+    a.className = 'icon-btn';
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.title = url;
+    a.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 4 6 4 9s-1.5 6.3-4 9c-2.5-2.7-4-6-4-9s1.5-6.3 4-9z"/></svg>`;
+    document.getElementById('addLinkBtn').before(a);
+  });
+
+  // ---------------------------------------------------------------
+  // Chat — now calling the real tutor server (server.py) running
+  // locally on LEARNER_API_URL. Same "ask, wait, get an answer"
+  // shape as your Supabase calls, just talking to your own Flask
+  // server instead of Supabase's.
+  // ---------------------------------------------------------------
+  async function getTutorReply(message){
+    try {
+      const response = await fetch(`${LEARNER_API_URL}/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: message })
+      });
+      const data = await response.json();
+      if (data.error) return `Sorry, something went wrong: ${data.error}`;
+      return data.answer;
+    } catch (e) {
+      return "Couldn't reach the tutor server — make sure server.py is running.";
+    }
+  }
+
+  function normalizeMathDelimiters(text){
+    // Markdown treats a backslash before [ or ( as an "escape" and
+    // silently strips it — so \[ \] \( \) never survive to reach
+    // KaTeX. Convert them to $ / $$ style first, which Markdown
+    // leaves alone. The (?<!\\) guards skip \[ / \( that are actually
+    // part of LaTeX's own \\ row-separator (e.g. \\[2pt] inside a
+    // matrix) — those aren't math delimiters and must stay untouched.
+    return text
+      .replace(/(?<!\\)\\\[/g, () => '$$')
+      .replace(/(?<!\\)\\\]/g, () => '$$')
+      .replace(/(?<!\\)\\\(/g, () => '$')
+      .replace(/(?<!\\)\\\)/g, () => '$');
+  }
+
+  const chatLog = document.getElementById('chatLog');
+  function addChatMsg(who, text){
+    const div = document.createElement('div');
+    div.className = `chat-msg ${who}`;
+    if (who === 'tutor') {
+      // Tutor replies may contain Markdown (**bold**, lists) and/or
+      // LaTeX math ($x^2$, \(\hbar\), etc.) — render both instead of
+      // dumping the raw symbols on screen.
+      div.innerHTML = marked.parse(normalizeMathDelimiters(text));
+      renderMathInElement(div, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false},
+          {left: '\\(', right: '\\)', display: false},
+          {left: '\\[', right: '\\]', display: true}
+        ]
+      });
+    } else {
+      // Student's own message — plain text, no need to render anything.
+      div.textContent = text;
+    }
+    chatLog.appendChild(div);
+    if (who === 'tutor') {
+      // Land on the START of the new answer, not the very bottom — a
+      // long reply shouldn't dump you at its last line. Set scrollTop
+      // on chatLog directly (the only scrollable container now) rather
+      // than div.scrollIntoView(), which was climbing through nested
+      // scroll parents and effectively re-scrolling past the top of
+      // the message down toward the bottom of the log.
+      requestAnimationFrame(() => {
+        chatLog.scrollTop = div.offsetTop - 12;
+      });
+    } else {
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+  }
+  async function logChatToSupabase(question, answer){
+    try {
+      await supabaseClient.from('CHAT_LOGS').insert(
+        [{ User: currentUser.id, question, answer }]
+      );
+    } catch(e){
+      console.error('Could not log chat:', e);
+    }
+  }
+
+  async function handleChatSend(){
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if(!text) return;
+    addChatMsg('student', text);
+    input.value = '';
+    const reply = await getTutorReply(text);
+    addChatMsg('tutor', reply);
+    logChatToSupabase(text, reply);
+  }
+  document.getElementById('chatSend').addEventListener('click', handleChatSend);
+  document.getElementById('chatInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter') handleChatSend();
+  });
+
+  // ---------------------------------------------------------------
+  // Init — called once, right after login (or on page load if a
+  // Supabase session already exists).
+  // ---------------------------------------------------------------
+  async function initApp() {
+    const initials = currentUser.email ? currentUser.email.slice(0, 2).toUpperCase() : "U";
+    const profileBtn = document.getElementById('profileOpenBtn');
+    if (profileBtn && !profileBtn.style.backgroundImage) {
+      profileBtn.textContent = initials;
+    }
+    const nameDisplay = document.getElementById('profileNameDisplay');
+    if (nameDisplay) nameDisplay.textContent = currentUser.email;
+
+    await loadProfile();
+    await loadUserProgress();
+
+    renderBadges();
+    renderList('quizList', state.quizzes, 'Start Quiz');
+    renderList('summaryList', state.summaries, 'Mark as Read');
+    renderList('lectureList', state.lectures, 'Watch');
+    renderTrackRecord();
+  }
+
+  // On page load: if a session already exists, skip straight to the
+  // app. Otherwise show the login screen.
+  (async function boot() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (user) {
+      await showApp(user);
+    } else {
+      showAuthScreen();
+    }
+  })();
+</script>
+
+</div><!-- /#appRoot -->
+
+</body>
+</html>
